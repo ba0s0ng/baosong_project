@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机床管理 - 工业互联网机床状态监测平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-industry"></i>
+                工业互联网机床监测平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">
+                    <i class="fas fa-tachometer-alt"></i> 仪表盘
+                </a>
+                <a class="nav-link active" href="/machines">
+                    <i class="fas fa-cogs"></i> 机床管理
+                </a>
+                <a class="nav-link" href="/digital-twin">
+                    <i class="fas fa-cube"></i> 数字孪生
+                </a>
+                <a class="nav-link" href="/database">
+                    <i class="fas fa-database"></i> 数据库管理
+                </a>
+                <a class="nav-link" href="/alarms">
+                    <i class="fas fa-exclamation-triangle"></i> 报警管理
+                </a>
+                <a class="nav-link" href="/analytics">
+                    <i class="fas fa-chart-line"></i> 数据分析
+                </a>
+                <span class="navbar-text">
+                    <i class="fas fa-wifi" id="connection-status"></i>
+                    <span id="connection-text">连接中...</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <div class="container-fluid mt-3">
+        <!-- 工具栏 -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h4><i class="fas fa-cogs"></i> 机床管理</h4>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" id="refresh-btn">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="add-machine-btn">
+                        <i class="fas fa-plus"></i> 添加机床
+                    </button>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter"></i> 筛选
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-filter="all">全部</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="running">运行中</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="idle">待机</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="error">故障</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="offline">离线</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="maintenance">维护中</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 机床列表 -->
+        <div class="row" id="machines-container">
+            <!-- 机床卡片将通过JavaScript动态生成 -->
+        </div>
+
+        <!-- 机床详情模态框 -->
+        <div class="modal fade" id="machineDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">机床详情</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <!-- 基本信息 -->
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">基本信息</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="machine-basic-info">
+                                            <!-- 基本信息内容 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 实时参数 -->
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">实时参数</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="machine-parameters">
+                                            <!-- 参数内容 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 历史数据图表 -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">历史数据趋势</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="machine-history-chart" style="height: 300px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        <button type="button" class="btn btn-primary" id="control-machine-btn">控制机床</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加机床模态框 -->
+        <div class="modal fade" id="addMachineModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">添加机床</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="add-machine-form">
+                            <div class="mb-3">
+                                <label for="machine-id" class="form-label">机床ID</label>
+                                <input type="text" class="form-control" id="machine-id" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="machine-name" class="form-label">机床名称</label>
+                                <input type="text" class="form-control" id="machine-name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="machine-type" class="form-label">机床类型</label>
+                                <select class="form-select" id="machine-type" required>
+                                    <option value="">请选择</option>
+                                    <option value="CNC_LATHE">数控车床</option>
+                                    <option value="MILLING_MACHINE">铣床</option>
+                                    <option value="DRILLING_MACHINE">钻床</option>
+                                    <option value="GRINDING_MACHINE">磨床</option>
+                                    <option value="BORING_MACHINE">镗床</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="machine-location" class="form-label">位置</label>
+                                <input type="text" class="form-control" id="machine-location">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="save-machine-btn">保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/charts.js"></script>
+    <script>
+        // 机床管理应用
+        class MachinesApp {
+            constructor() {
+                this.machines = new Map();
+                this.currentFilter = 'all';
+                this.selectedMachine = null;
+                this.init();
+            }
+
+            async init() {
+                console.log('初始化机床管理...');
+                
+                // 连接WebSocket
+                if (window.wsManager) {
+                    window.wsManager.on('machine_data', (message) => {
+                        if (message.machines) {
+                            // 批量更新所有机床数据
+                            message.machines.forEach(machine => {
+                                this.machines.set(machine.id, machine);
+                            });
+                            this.renderMachines();
+                        }
+                    });
+                    
+                    window.wsManager.on('machine_update', (message) => {
+                        // 单个机床状态更新
+                        if (message.machine_id && message.data) {
+                            this.updateMachineData(message.machine_id, message.data);
+                        }
+                    });
+                }
+
+                // 绑定事件
+                this.bindEvents();
+                
+                // 加载初始数据
+                await this.loadMachines();
+            }
+
+            bindEvents() {
+                // 刷新按钮
+                document.getElementById('refresh-btn').addEventListener('click', () => {
+                    this.loadMachines();
+                });
+
+                // 添加机床按钮
+                document.getElementById('add-machine-btn').addEventListener('click', () => {
+                    const modal = new bootstrap.Modal(document.getElementById('addMachineModal'));
+                    modal.show();
+                });
+
+                // 保存机床按钮
+                document.getElementById('save-machine-btn').addEventListener('click', () => {
+                    this.saveMachine();
+                });
+
+                // 筛选按钮
+                document.querySelectorAll('[data-filter]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.currentFilter = e.target.dataset.filter;
+                        this.renderMachines();
+                    });
+                });
+            }
+
+            async loadMachines() {
+                try {
+                    const response = await fetch('/api/machines');
+                    const data = await response.json();
+                    
+                    if (data.machines) {
+                        this.machines.clear();
+                        data.machines.forEach(machine => {
+                            this.machines.set(machine.id, machine);
+                        });
+                        this.renderMachines();
+                    }
+                } catch (error) {
+                    console.error('加载机床数据失败:', error);
+                }
+            }
+
+            updateMachineData(machineId, data) {
+                this.machines.set(machineId, data);
+                this.renderMachines();
+                
+                // 如果详情模态框打开且是当前机床，更新详情
+                if (this.selectedMachine && this.selectedMachine.machine_id === machineId) {
+                    this.updateMachineDetail(data);
+                }
+            }
+
+            renderMachines() {
+                const container = document.getElementById('machines-container');
+                if (!container) return;
+
+                const filteredMachines = Array.from(this.machines.values()).filter(machine => {
+                    return this.currentFilter === 'all' || machine.status === this.currentFilter;
+                });
+
+                const html = filteredMachines.map(machine => {
+                    const statusClass = this.getStatusClass(machine.status);
+                    const statusText = this.getStatusText(machine.status);
+                    
+                    return `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card machine-card" data-machine-id="${machine.id}">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-0">${machine.id}</h6>
+                                    <span class="badge ${statusClass}">${statusText}</span>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="text-muted">${machine.name || machine.brand + ' ' + machine.model}</h6>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">温度</small>
+                                            <div class="fw-bold">${(machine.temperature || 0).toFixed(1)}°C</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">转速</small>
+                                            <div class="fw-bold">${(machine.speed || 0).toFixed(0)}rpm</div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-6">
+                                            <small class="text-muted">振动</small>
+                                            <div class="fw-bold">${(machine.vibration || 0).toFixed(1)}mm/s</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">电流</small>
+                                            <div class="fw-bold">${(machine.current || 0).toFixed(1)}A</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button class="btn btn-primary btn-sm me-1" onclick="machinesApp.showMachineDetail('${machine.id}')">
+                                            <i class="fas fa-eye"></i> 详情
+                                        </button>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                                <i class="fas fa-cog"></i> 控制
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#" onclick="machinesApp.setMachineStatus('${machine.id}', 'running')">
+                                                    <i class="fas fa-play text-success"></i> 启动
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="machinesApp.setMachineStatus('${machine.id}', 'idle')">
+                                                    <i class="fas fa-pause text-warning"></i> 停止
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="machinesApp.setMachineStatus('${machine.id}', 'offline')">
+                                                    <i class="fas fa-power-off text-secondary"></i> 掉线
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="machinesApp.setMachineStatus('${machine.id}', 'error')">
+                                                    <i class="fas fa-exclamation-triangle text-danger"></i> 告警
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="machinesApp.setMachineStatus('${machine.id}', 'maintenance')">
+                                                    <i class="fas fa-wrench text-info"></i> 维护
+                                                </a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item" href="#" onclick="machinesApp.emergencyStop('${machine.id}')">
+                                                    <i class="fas fa-stop-circle text-danger"></i> 紧急停机
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">
+                                        最后更新: ${new Date(machine.last_update).toLocaleString()}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = html || '<div class="col-12"><div class="alert alert-info">暂无机床数据</div></div>';
+            }
+
+            showMachineDetail(machineId) {
+                const machine = this.machines.get(machineId);
+                if (!machine) return;
+
+                this.selectedMachine = machine;
+                
+                // 更新基本信息
+                const basicInfo = document.getElementById('machine-basic-info');
+                basicInfo.innerHTML = `
+                    <div class="mb-2">
+                        <strong>机床ID:</strong> ${machine.id}
+                    </div>
+                    <div class="mb-2">
+                        <strong>名称:</strong> ${machine.name || machine.brand + ' ' + machine.model}
+                    </div>
+                    <div class="mb-2">
+                        <strong>品牌:</strong> ${machine.brand || 'N/A'}
+                    </div>
+                    <div class="mb-2">
+                        <strong>型号:</strong> ${machine.model || 'N/A'}
+                    </div>
+                    <div class="mb-2">
+                        <strong>类型:</strong> ${this.getMachineTypeText(machine.type)}
+                    </div>
+                    <div class="mb-2">
+                        <strong>位置:</strong> ${machine.location || 'N/A'}
+                    </div>
+                    <div class="mb-2">
+                        <strong>状态:</strong> 
+                        <span class="badge ${this.getStatusClass(machine.status)}">${this.getStatusText(machine.status)}</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>最后更新:</strong> ${new Date(machine.last_update).toLocaleString()}
+                    </div>
+                `;
+
+                // 更新参数信息
+                this.updateMachineDetail(machine);
+                
+                // 初始化历史数据图表
+                this.initHistoryChart(machine);
+
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('machineDetailModal'));
+                modal.show();
+            }
+
+            updateMachineDetail(machine) {
+                const parameters = document.getElementById('machine-parameters');
+                if (!parameters) return;
+
+                parameters.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="parameter-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>温度</span>
+                                    <span class="fw-bold">${(machine.temperature || 0).toFixed(1)}°C</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar ${this.getTemperatureClass(machine.temperature)}" 
+                                         style="width: ${Math.min((machine.temperature || 0) / 80 * 100, 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="parameter-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>振动</span>
+                                    <span class="fw-bold">${(machine.vibration || 0).toFixed(1)}mm/s</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar ${this.getVibrationClass(machine.vibration)}" 
+                                         style="width: ${Math.min((machine.vibration || 0) / 10 * 100, 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="parameter-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>电流</span>
+                                    <span class="fw-bold">${(machine.current || 0).toFixed(1)}A</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-info" 
+                                         style="width: ${Math.min((machine.current || 0) / 50 * 100, 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="parameter-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>转速</span>
+                                    <span class="fw-bold">${(machine.speed || 0).toFixed(0)}rpm</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-primary" 
+                                         style="width: ${Math.min((machine.speed || 0) / 3000 * 100, 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="parameter-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>压力</span>
+                                    <span class="fw-bold">${(machine.pressure || 0).toFixed(1)}bar</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-warning" 
+                                         style="width: ${Math.min((machine.pressure || 0) / 15 * 100, 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="parameter-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>效率</span>
+                                    <span class="fw-bold">${(machine.efficiency || 85).toFixed(0)}%</span>
+                                </div>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: ${machine.efficiency || 85}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            initHistoryChart(machine) {
+                const container = document.getElementById('machine-history-chart');
+                if (!container) return;
+
+                const chart = echarts.init(container);
+                
+                // 模拟历史数据
+                const times = [];
+                const temperatures = [];
+                const vibrations = [];
+                const speeds = [];
+                
+                for (let i = 23; i >= 0; i--) {
+                    const time = new Date(Date.now() - i * 60 * 60 * 1000);
+                    times.push(time.toLocaleTimeString());
+                    temperatures.push((machine.temperature || 45) + Math.random() * 10 - 5);
+                    vibrations.push((machine.vibration || 2) + Math.random() * 2 - 1);
+                    speeds.push((machine.speed || 1200) + Math.random() * 400 - 200);
+                }
+
+                const option = {
+                    title: {
+                        text: `${machine.id} 24小时历史数据`,
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['温度', '振动', '转速'],
+                        top: 30
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: times
+                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '温度/振动',
+                            position: 'left'
+                        },
+                        {
+                            type: 'value',
+                            name: '转速',
+                            position: 'right'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '温度',
+                            type: 'line',
+                            data: temperatures,
+                            smooth: true,
+                            yAxisIndex: 0
+                        },
+                        {
+                            name: '振动',
+                            type: 'line',
+                            data: vibrations,
+                            smooth: true,
+                            yAxisIndex: 0
+                        },
+                        {
+                            name: '转速',
+                            type: 'line',
+                            data: speeds,
+                            smooth: true,
+                            yAxisIndex: 1
+                        }
+                    ]
+                };
+
+                chart.setOption(option);
+                
+                // 响应式调整
+                window.addEventListener('resize', () => {
+                    chart.resize();
+                });
+            }
+
+            controlMachine(machineId) {
+                const machine = this.machines.get(machineId);
+                if (!machine) return;
+
+                // 显示机床控制面板
+                this.showMachineControlPanel(machineId, machine);
+            }
+
+            showMachineControlPanel(machineId, machine) {
+                // 创建控制面板模态框
+                const modalHtml = `
+                    <div class="modal fade" id="machineControlModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-cog"></i> 控制机床 ${machineId}
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <!-- 当前状态 -->
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">当前状态</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-2">
+                                                        <strong>状态:</strong> 
+                                                        <span class="badge ${this.getStatusClass(machine.status)}" id="current-status">
+                                                            ${this.getStatusText(machine.status)}
+                                                        </span>
+                                                    </div>
+                                                    <div class="mb-2">
+                                                        <strong>转速:</strong> <span id="current-speed">${machine.speed}</span> rpm
+                                                    </div>
+                                                    <div class="mb-2">
+                                                        <strong>温度:</strong> <span id="current-temp">${machine.temperature.toFixed(1)}</span> °C
+                                                    </div>
+                                                    <div class="mb-2">
+                                                        <strong>电流:</strong> <span id="current-current">${machine.current.toFixed(1)}</span> A
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 控制面板 -->
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">控制面板</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">状态控制</label>
+                                                        <div class="btn-group w-100" role="group">
+                                                            <button class="btn btn-success btn-sm" onclick="machinesApp.controlMachineAction('${machineId}', 'start')">
+                                                                <i class="fas fa-play"></i> 启动
+                                                            </button>
+                                                            <button class="btn btn-warning btn-sm" onclick="machinesApp.controlMachineAction('${machineId}', 'stop')">
+                                                                <i class="fas fa-pause"></i> 停止
+                                                            </button>
+                                                            <button class="btn btn-danger btn-sm" onclick="machinesApp.controlMachineAction('${machineId}', 'emergency_stop')">
+                                                                <i class="fas fa-stop-circle"></i> 急停
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label class="form-label">转速设置</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control" id="speed-input" 
+                                                                   value="${machine.speed}" min="0" max="3000" step="50">
+                                                            <span class="input-group-text">rpm</span>
+                                                            <button class="btn btn-outline-primary" onclick="machinesApp.setMachineSpeed('${machineId}')">
+                                                                设置
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label class="form-label">状态切换</label>
+                                                        <select class="form-select" id="status-select">
+                                                            <option value="running" ${machine.status === 'running' ? 'selected' : ''}>运行中</option>
+                                                            <option value="idle" ${machine.status === 'idle' ? 'selected' : ''}>待机</option>
+                                                            <option value="maintenance" ${machine.status === 'maintenance' ? 'selected' : ''}>维护</option>
+                                                            <option value="offline" ${machine.status === 'offline' ? 'selected' : ''}>离线</option>
+                                                            <option value="error" ${machine.status === 'error' ? 'selected' : ''}>故障</option>
+                                                        </select>
+                                                        <button class="btn btn-outline-secondary btn-sm mt-2 w-100" onclick="machinesApp.setMachineStatusFromPanel('${machineId}')">
+                                                            应用状态
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 实时监控图表 -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">实时监控</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div id="control-chart" style="height: 200px;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                    <button type="button" class="btn btn-primary" onclick="machinesApp.refreshMachineStatus('${machineId}')">
+                                        <i class="fas fa-sync-alt"></i> 刷新状态
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 移除已存在的模态框
+                const existingModal = document.getElementById('machineControlModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+
+                // 添加新的模态框
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('machineControlModal'));
+                modal.show();
+
+                // 初始化实时监控图表
+                this.initControlChart(machineId);
+
+                // 设置定时更新
+                this.startControlPanelUpdates(machineId);
+            }
+
+            async controlMachineAction(machineId, action) {
+                try {
+                    const response = await fetch(`/api/machines/${machineId}/control`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            type: action
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        // 更新本地数据
+                        if (result.machine) {
+                            this.machines.set(machineId, result.machine);
+                            this.renderMachines();
+                            this.updateControlPanelStatus(result.machine);
+                        }
+                        this.showToast(`机床 ${machineId} ${action} 操作成功`, 'success');
+                    } else {
+                        this.showToast('操作失败: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('控制操作失败:', error);
+                    this.showToast('控制操作失败: ' + error.message, 'error');
+                }
+            }
+
+            async setMachineSpeed(machineId) {
+                const speedInput = document.getElementById('speed-input');
+                const speed = parseInt(speedInput.value);
+
+                if (isNaN(speed) || speed < 0 || speed > 3000) {
+                    this.showToast('转速值无效，请输入0-3000之间的数值', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/machines/${machineId}/control`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            type: 'set_speed',
+                            value: speed
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        if (result.machine) {
+                            this.machines.set(machineId, result.machine);
+                            this.renderMachines();
+                            this.updateControlPanelStatus(result.machine);
+                        }
+                        this.showToast(`机床 ${machineId} 转速已设置为 ${speed} rpm`, 'success');
+                    } else {
+                        this.showToast('设置转速失败: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('设置转速失败:', error);
+                    this.showToast('设置转速失败: ' + error.message, 'error');
+                }
+            }
+
+            async setMachineStatusFromPanel(machineId) {
+                const statusSelect = document.getElementById('status-select');
+                const status = statusSelect.value;
+
+                await this.setMachineStatus(machineId, status);
+            }
+
+            updateControlPanelStatus(machine) {
+                // 更新控制面板中的状态显示
+                const currentStatus = document.getElementById('current-status');
+                const currentSpeed = document.getElementById('current-speed');
+                const currentTemp = document.getElementById('current-temp');
+                const currentCurrent = document.getElementById('current-current');
+
+                if (currentStatus) {
+                    currentStatus.className = `badge ${this.getStatusClass(machine.status)}`;
+                    currentStatus.textContent = this.getStatusText(machine.status);
+                }
+                if (currentSpeed) currentSpeed.textContent = machine.speed;
+                if (currentTemp) currentTemp.textContent = machine.temperature.toFixed(1);
+                if (currentCurrent) currentCurrent.textContent = machine.current.toFixed(1);
+            }
+
+            initControlChart(machineId) {
+                const container = document.getElementById('control-chart');
+                if (!container) return;
+
+                const chart = echarts.init(container);
+                
+                // 初始化数据
+                const times = [];
+                const temperatures = [];
+                const speeds = [];
+                const currents = [];
+                
+                for (let i = 9; i >= 0; i--) {
+                    const time = new Date(Date.now() - i * 10000);
+                    times.push(time.toLocaleTimeString());
+                    
+                    const machine = this.machines.get(machineId);
+                    temperatures.push(machine.temperature + Math.random() * 4 - 2);
+                    speeds.push(machine.speed + Math.random() * 100 - 50);
+                    currents.push(machine.current + Math.random() * 2 - 1);
+                }
+
+                const option = {
+                    title: {
+                        text: `${machineId} 实时监控`,
+                        left: 'center',
+                        textStyle: { fontSize: 14 }
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['温度', '转速', '电流'],
+                        top: 25
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: times
+                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '温度/电流',
+                            position: 'left'
+                        },
+                        {
+                            type: 'value',
+                            name: '转速',
+                            position: 'right'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '温度',
+                            type: 'line',
+                            data: temperatures,
+                            smooth: true,
+                            yAxisIndex: 0,
+                            itemStyle: { color: '#ff6b6b' }
+                        },
+                        {
+                            name: '电流',
+                            type: 'line',
+                            data: currents,
+                            smooth: true,
+                            yAxisIndex: 0,
+                            itemStyle: { color: '#4ecdc4' }
+                        },
+                        {
+                            name: '转速',
+                            type: 'line',
+                            data: speeds,
+                            smooth: true,
+                            yAxisIndex: 1,
+                            itemStyle: { color: '#45b7d1' }
+                        }
+                    ]
+                };
+
+                chart.setOption(option);
+                
+                // 保存图表实例以便更新
+                this.controlChart = chart;
+                
+                // 响应式调整
+                window.addEventListener('resize', () => {
+                    chart.resize();
+                });
+            }
+
+            startControlPanelUpdates(machineId) {
+                // 清除之前的定时器
+                if (this.controlUpdateInterval) {
+                    clearInterval(this.controlUpdateInterval);
+                }
+
+                // 每2秒更新一次控制面板
+                this.controlUpdateInterval = setInterval(() => {
+                    const machine = this.machines.get(machineId);
+                    if (machine) {
+                        this.updateControlPanelStatus(machine);
+                        this.updateControlChart(machine);
+                    }
+                }, 2000);
+
+                // 模态框关闭时清除定时器
+                const modal = document.getElementById('machineControlModal');
+                if (modal) {
+                    modal.addEventListener('hidden.bs.modal', () => {
+                        if (this.controlUpdateInterval) {
+                            clearInterval(this.controlUpdateInterval);
+                            this.controlUpdateInterval = null;
+                        }
+                    });
+                }
+            }
+
+            updateControlChart(machine) {
+                if (!this.controlChart) return;
+
+                const option = this.controlChart.getOption();
+                const times = option.xAxis[0].data;
+                const tempData = option.series[0].data;
+                const currentData = option.series[1].data;
+                const speedData = option.series[2].data;
+
+                // 添加新数据点
+                times.push(new Date().toLocaleTimeString());
+                tempData.push(machine.temperature);
+                currentData.push(machine.current);
+                speedData.push(machine.speed);
+
+                // 保持最多10个数据点
+                if (times.length > 10) {
+                    times.shift();
+                    tempData.shift();
+                    currentData.shift();
+                    speedData.shift();
+                }
+
+                this.controlChart.setOption({
+                    xAxis: { data: times },
+                    series: [
+                        { data: tempData },
+                        { data: currentData },
+                        { data: speedData }
+                    ]
+                });
+            }
+
+            async refreshMachineStatus(machineId) {
+                try {
+                    const response = await fetch(`/api/machines/${machineId}`);
+                    const machine = await response.json();
+                    
+                    this.machines.set(machineId, machine);
+                    this.renderMachines();
+                    this.updateControlPanelStatus(machine);
+                    this.showToast(`机床 ${machineId} 状态已刷新`, 'success');
+                } catch (error) {
+                    console.error('刷新状态失败:', error);
+                    this.showToast('刷新状态失败: ' + error.message, 'error');
+                }
+            }
+
+            saveMachine() {
+                const form = document.getElementById('add-machine-form');
+                const formData = new FormData(form);
+                
+                const machineData = {
+                    machine_id: document.getElementById('machine-id').value,
+                    name: document.getElementById('machine-name').value,
+                    type: document.getElementById('machine-type').value,
+                    location: document.getElementById('machine-location').value,
+                    status: 'OFFLINE',
+                    temperature: 25,
+                    vibration: 0,
+                    current: 0,
+                    speed: 0,
+                    pressure: 0,
+                    last_update: new Date().toISOString()
+                };
+
+                // 这里应该发送到后端API
+                console.log('保存机床数据:', machineData);
+                
+                // 临时添加到本地
+                this.machines.set(machineData.machine_id, machineData);
+                this.renderMachines();
+                
+                // 关闭模态框
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addMachineModal'));
+                modal.hide();
+                
+                // 重置表单
+                form.reset();
+            }
+
+            getStatusClass(status) {
+                if (!status) return 'bg-secondary';
+                const normalizedStatus = status.toString().toUpperCase();
+                const classMap = {
+                    'RUNNING': 'bg-success',
+                    'IDLE': 'bg-warning',
+                    'ERROR': 'bg-danger',
+                    'OFFLINE': 'bg-secondary',
+                    'MAINTENANCE': 'bg-info'
+                };
+                return classMap[normalizedStatus] || 'bg-secondary';
+            }
+
+            getStatusText(status) {
+                if (!status) return '未知';
+                const normalizedStatus = status.toString().toUpperCase();
+                const textMap = {
+                    'RUNNING': '运行中',
+                    'IDLE': '待机',
+                    'ERROR': '故障',
+                    'OFFLINE': '离线',
+                    'MAINTENANCE': '维护中'
+                };
+                return textMap[normalizedStatus] || '未知';
+            }
+
+            getMachineTypeText(type) {
+                const typeMap = {
+                    'CNC_LATHE': '数控车床',
+                    'MILLING_MACHINE': '铣床',
+                    'DRILLING_MACHINE': '钻床',
+                    'GRINDING_MACHINE': '磨床',
+                    'BORING_MACHINE': '镗床'
+                };
+                return typeMap[type] || type;
+            }
+
+            getTemperatureClass(temperature) {
+                if (temperature > 70) return 'bg-danger';
+                if (temperature > 60) return 'bg-warning';
+                return 'bg-success';
+            }
+
+            getVibrationClass(vibration) {
+                if (vibration > 5) return 'bg-danger';
+                if (vibration > 3) return 'bg-warning';
+                return 'bg-success';
+            }
+
+            // 设置机床状态
+            async setMachineStatus(machineId, status) {
+                try {
+                    // 检查机床是否存在
+                    if (!this.machines.has(machineId)) {
+                        this.showToast(`机床 ${machineId} 不存在`, 'error');
+                        return;
+                    }
+
+                    const response = await fetch(`/api/machines/${machineId}/control`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            type: 'set_status',
+                            status: status
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        // 更新本地数据
+                        if (result.machine) {
+                            this.machines.set(machineId, result.machine);
+                            this.renderMachines();
+                        }
+                        const statusText = this.getStatusText(status) || this.getStatusText(result.machine.status) || '未知状态';
+                        this.showToast(`机床 ${machineId} 状态已设置为 ${statusText}`, 'success');
+                    } else {
+                        this.showToast('操作失败: ' + (result.message || '未知错误'), 'error');
+                    }
+                } catch (error) {
+                    console.error('设置机床状态失败:', error);
+                    this.showToast('设置状态失败: ' + error.message, 'error');
+                }
+            }
+
+            // 紧急停机
+            async emergencyStop(machineId) {
+                if (!confirm(`确定要对机床 ${machineId} 执行紧急停机吗？`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/machines/${machineId}/control`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            type: 'emergency_stop'
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        // 更新本地数据
+                        if (result.machine) {
+                            this.machines.set(machineId, result.machine);
+                            this.renderMachines();
+                        }
+                        this.showToast(`机床 ${machineId} 已紧急停机`, 'warning');
+                    } else {
+                        this.showToast('紧急停机失败: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('紧急停机失败:', error);
+                    this.showToast('紧急停机失败: ' + error.message, 'error');
+                }
+            }
+
+            // 显示提示消息
+            showToast(message, type = 'info') {
+                // 创建Toast元素
+                const toastContainer = document.getElementById('toast-container') || this.createToastContainer();
+                
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+                    <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'primary'} border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                ${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>
+                `;
+                
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+                
+                // 自动移除
+                toastElement.addEventListener('hidden.bs.toast', () => {
+                    toastElement.remove();
+                });
+            }
+
+            createToastContainer() {
+                const container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+                return container;
+            }
+        }
+
+        // 初始化机床管理应用
+        const machinesApp = new MachinesApp();
+    </script>
+</body>
+</html>

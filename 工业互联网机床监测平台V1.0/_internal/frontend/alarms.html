@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报警管理 - 工业互联网机床状态监测平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-industry"></i>
+                工业互联网机床监测平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">
+                    <i class="fas fa-tachometer-alt"></i> 仪表盘
+                </a>
+                <a class="nav-link" href="/machines">
+                    <i class="fas fa-cogs"></i> 机床管理
+                </a>
+                <a class="nav-link" href="/digital-twin">
+                    <i class="fas fa-cube"></i> 数字孪生
+                </a>
+                <a class="nav-link" href="/database">
+                    <i class="fas fa-database"></i> 数据库管理
+                </a>
+                <a class="nav-link active" href="/alarms">
+                    <i class="fas fa-exclamation-triangle"></i> 报警管理
+                </a>
+                <a class="nav-link" href="/analytics">
+                    <i class="fas fa-chart-line"></i> 数据分析
+                </a>
+                <span class="navbar-text">
+                    <i class="fas fa-wifi" id="connection-status"></i>
+                    <span id="connection-text">连接中...</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <div class="container-fluid mt-3">
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">严重报警</h6>
+                                <h3 id="critical-alarms">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">警告报警</h6>
+                                <h3 id="warning-alarms">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">信息报警</h6>
+                                <h3 id="info-alarms">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-info-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">已确认</h6>
+                                <h3 id="acknowledged-alarms">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 报警列表 -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list"></i> 报警列表
+                        </h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="refresh-alarms-btn">
+                                <i class="fas fa-sync-alt"></i> 刷新
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm" id="ack-all-btn">
+                                <i class="fas fa-check"></i> 全部确认
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="clear-all-btn">
+                                <i class="fas fa-trash"></i> 清空历史
+                            </button>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-filter"></i> 筛选
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" data-filter="all">全部</a></li>
+                                    <li><a class="dropdown-item" href="#" data-filter="CRITICAL">严重</a></li>
+                                    <li><a class="dropdown-item" href="#" data-filter="WARNING">警告</a></li>
+                                    <li><a class="dropdown-item" href="#" data-filter="INFO">信息</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" data-filter="unacknowledged">未确认</a></li>
+                                    <li><a class="dropdown-item" href="#" data-filter="acknowledged">已确认</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th width="5%">
+                                            <input type="checkbox" class="form-check-input" id="select-all-alarms">
+                                        </th>
+                                        <th width="10%">级别</th>
+                                        <th width="15%">机床</th>
+                                        <th width="20%">类型</th>
+                                        <th width="30%">描述</th>
+                                        <th width="15%">时间</th>
+                                        <th width="5%">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alarms-table-body">
+                                    <!-- 报警数据将通过JavaScript动态添加 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 报警统计和规则 -->
+            <div class="col-md-4">
+                <!-- 报警趋势图 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">报警趋势</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="alarm-trend-chart" style="height: 200px;"></div>
+                    </div>
+                </div>
+
+                <!-- 报警规则配置 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">报警规则</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="alarm-rules-accordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#temperature-rule">
+                                        温度报警规则
+                                    </button>
+                                </h2>
+                                <div id="temperature-rule" class="accordion-collapse collapse" data-bs-parent="#alarm-rules-accordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label">警告阈值 (°C)</label>
+                                            <input type="number" class="form-control form-control-sm" id="temp-warning" value="60">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">严重阈值 (°C)</label>
+                                            <input type="number" class="form-control form-control-sm" id="temp-critical" value="70">
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="temp-enabled" checked>
+                                            <label class="form-check-label" for="temp-enabled">启用</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#vibration-rule">
+                                        振动报警规则
+                                    </button>
+                                </h2>
+                                <div id="vibration-rule" class="accordion-collapse collapse" data-bs-parent="#alarm-rules-accordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label">警告阈值 (mm/s)</label>
+                                            <input type="number" class="form-control form-control-sm" id="vib-warning" value="3" step="0.1">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">严重阈值 (mm/s)</label>
+                                            <input type="number" class="form-control form-control-sm" id="vib-critical" value="5" step="0.1">
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="vib-enabled" checked>
+                                            <label class="form-check-label" for="vib-enabled">启用</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#current-rule">
+                                        电流报警规则
+                                    </button>
+                                </h2>
+                                <div id="current-rule" class="accordion-collapse collapse" data-bs-parent="#alarm-rules-accordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label">过载阈值 (A)</label>
+                                            <input type="number" class="form-control form-control-sm" id="current-overload" value="40">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">欠载阈值 (A)</label>
+                                            <input type="number" class="form-control form-control-sm" id="current-underload" value="2">
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="current-enabled" checked>
+                                            <label class="form-check-label" for="current-enabled">启用</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-primary btn-sm w-100" id="save-rules-btn">
+                                <i class="fas fa-save"></i> 保存规则
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 报警通知设置 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">通知设置</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="email-notifications" checked>
+                                <label class="form-check-label" for="email-notifications">
+                                    邮件通知
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="sms-notifications">
+                                <label class="form-check-label" for="sms-notifications">
+                                    短信通知
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="sound-alerts" checked>
+                                <label class="form-check-label" for="sound-alerts">
+                                    声音报警
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">报警音量</label>
+                            <input type="range" class="form-range" id="alert-volume" min="0" max="100" value="50">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报警详情模态框 -->
+    <div class="modal fade" id="alarmDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">报警详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="alarm-detail-content">
+                        <!-- 报警详情内容 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-success" id="acknowledge-alarm-btn">确认报警</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script>
+        // 报警管理应用
+        class AlarmsApp {
+            constructor() {
+                this.alarms = [];
+                this.currentFilter = 'all';
+                this.selectedAlarms = new Set();
+                this.alarmRules = {
+                    temperature: { warning: 60, critical: 70, enabled: true },
+                    vibration: { warning: 3, critical: 5, enabled: true },
+                    current: { overload: 40, underload: 2, enabled: true }
+                };
+                this.notifications = {
+                    email: true,
+                    sms: false,
+                    sound: true,
+                    volume: 50
+                };
+                
+                this.init();
+            }
+
+            async init() {
+                console.log('初始化报警管理...');
+                
+                // 连接WebSocket
+                if (window.wsManager) {
+                    window.wsManager.on('alarm', (message) => {
+                        this.addNewAlarm(message.alarm);
+                    });
+                }
+
+                // 绑定事件
+                this.bindEvents();
+                
+                // 加载报警数据
+                await this.loadAlarms();
+                
+                // 初始化图表
+                this.initCharts();
+                
+                // 定期更新
+                this.startUpdates();
+            }
+
+            bindEvents() {
+                // 刷新按钮
+                document.getElementById('refresh-alarms-btn').addEventListener('click', () => {
+                    this.loadAlarms();
+                });
+
+                // 全部确认按钮
+                document.getElementById('ack-all-btn').addEventListener('click', () => {
+                    this.acknowledgeAllAlarms();
+                });
+
+                // 清空历史按钮
+                document.getElementById('clear-all-btn').addEventListener('click', () => {
+                    this.clearAllAlarms();
+                });
+
+                // 筛选按钮
+                document.querySelectorAll('[data-filter]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.currentFilter = e.target.dataset.filter;
+                        this.renderAlarms();
+                    });
+                });
+
+                // 全选复选框
+                document.getElementById('select-all-alarms').addEventListener('change', (e) => {
+                    this.selectAllAlarms(e.target.checked);
+                });
+
+                // 保存规则按钮
+                document.getElementById('save-rules-btn').addEventListener('click', () => {
+                    this.saveAlarmRules();
+                });
+
+                // 确认报警按钮
+                document.getElementById('acknowledge-alarm-btn').addEventListener('click', () => {
+                    this.acknowledgeSelectedAlarm();
+                });
+            }
+
+            async loadAlarms() {
+                try {
+                    const response = await fetch('/api/alarms');
+                    const data = await response.json();
+                    
+                    if (data.alarms) {
+                        this.alarms = data.alarms;
+                        this.renderAlarms();
+                        this.updateStatistics();
+                    }
+                } catch (error) {
+                    console.error('加载报警数据失败:', error);
+                }
+            }
+
+            addNewAlarm(alarm) {
+                this.alarms.unshift(alarm);
+                if (this.alarms.length > 1000) {
+                    this.alarms = this.alarms.slice(0, 1000);
+                }
+                
+                this.renderAlarms();
+                this.updateStatistics();
+                
+                // 播放报警声音
+                if (this.notifications.sound) {
+                    this.playAlarmSound(alarm.level);
+                }
+                
+                // 显示桌面通知
+                this.showDesktopNotification(alarm);
+            }
+
+            renderAlarms() {
+                const tbody = document.getElementById('alarms-table-body');
+                if (!tbody) return;
+
+                const filteredAlarms = this.alarms.filter(alarm => {
+                    if (this.currentFilter === 'all') return true;
+                    if (this.currentFilter === 'unacknowledged') return !alarm.is_acknowledged;
+                    if (this.currentFilter === 'acknowledged') return alarm.is_acknowledged;
+                    return alarm.level === this.currentFilter;
+                });
+
+                const html = filteredAlarms.map(alarm => {
+                    const levelClass = this.getAlarmLevelClass(alarm.level);
+                    const timeStr = new Date(alarm.timestamp).toLocaleString();
+                    const isSelected = this.selectedAlarms.has(alarm.alarm_id);
+                    
+                    return `
+                        <tr class="alarm-row ${alarm.is_acknowledged ? 'table-secondary' : ''}" data-alarm-id="${alarm.alarm_id}">
+                            <td>
+                                <input type="checkbox" class="form-check-input alarm-checkbox" 
+                                       ${isSelected ? 'checked' : ''} 
+                                       data-alarm-id="${alarm.alarm_id}">
+                            </td>
+                            <td>
+                                <span class="badge ${levelClass}">${alarm.level}</span>
+                            </td>
+                            <td>
+                                <strong>${alarm.machine_id}</strong>
+                            </td>
+                            <td>
+                                ${this.getAlarmTypeText(alarm.type)}
+                            </td>
+                            <td>
+                                <div class="alarm-message">${alarm.message}</div>
+                                ${alarm.parameter ? `<small class="text-muted">${alarm.parameter}: ${alarm.value}${this.getParameterUnit(alarm.parameter)}</small>` : ''}
+                            </td>
+                            <td>
+                                <small>${timeStr}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="alarmsApp.showAlarmDetail('${alarm.alarm_id}')" title="详情">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    ${!alarm.is_acknowledged ? `
+                                        <button class="btn btn-outline-success btn-sm" onclick="alarmsApp.acknowledgeAlarm('${alarm.alarm_id}')" title="确认">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tbody.innerHTML = html || '<tr><td colspan="7" class="text-center text-muted">暂无报警数据</td></tr>';
+
+                // 绑定复选框事件
+                tbody.querySelectorAll('.alarm-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const alarmId = e.target.dataset.alarmId;
+                        if (e.target.checked) {
+                            this.selectedAlarms.add(alarmId);
+                        } else {
+                            this.selectedAlarms.delete(alarmId);
+                        }
+                    });
+                });
+            }
+
+            updateStatistics() {
+                const stats = {
+                    critical: 0,
+                    warning: 0,
+                    info: 0,
+                    acknowledged: 0
+                };
+
+                this.alarms.forEach(alarm => {
+                    if (alarm.is_acknowledged) {
+                        stats.acknowledged++;
+                    } else {
+                        switch (alarm.level) {
+                            case 'CRITICAL':
+                                stats.critical++;
+                                break;
+                            case 'WARNING':
+                                stats.warning++;
+                                break;
+                            case 'INFO':
+                                stats.info++;
+                                break;
+                        }
+                    }
+                });
+
+                document.getElementById('critical-alarms').textContent = stats.critical;
+                document.getElementById('warning-alarms').textContent = stats.warning;
+                document.getElementById('info-alarms').textContent = stats.info;
+                document.getElementById('acknowledged-alarms').textContent = stats.acknowledged;
+            }
+
+            showAlarmDetail(alarmId) {
+                const alarm = this.alarms.find(a => a.alarm_id === alarmId);
+                if (!alarm) return;
+
+                const content = document.getElementById('alarm-detail-content');
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本信息</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>报警ID:</strong></td><td>${alarm.alarm_id}</td></tr>
+                                <tr><td><strong>机床:</strong></td><td>${alarm.machine_id}</td></tr>
+                                <tr><td><strong>级别:</strong></td><td><span class="badge ${this.getAlarmLevelClass(alarm.level)}">${alarm.level}</span></td></tr>
+                                <tr><td><strong>类型:</strong></td><td>${this.getAlarmTypeText(alarm.type)}</td></tr>
+                                <tr><td><strong>状态:</strong></td><td>${alarm.is_acknowledged ? '已确认' : '未确认'}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>详细信息</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>参数:</strong></td><td>${alarm.parameter || 'N/A'}</td></tr>
+                                <tr><td><strong>当前值:</strong></td><td>${alarm.value || 'N/A'}${alarm.parameter ? this.getParameterUnit(alarm.parameter) : ''}</td></tr>
+                                <tr><td><strong>阈值:</strong></td><td>${alarm.threshold || 'N/A'}${alarm.parameter ? this.getParameterUnit(alarm.parameter) : ''}</td></tr>
+                                <tr><td><strong>发生时间:</strong></td><td>${new Date(alarm.timestamp).toLocaleString()}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>描述</h6>
+                            <div class="alert alert-${this.getAlarmLevelBootstrapClass(alarm.level)}">
+                                ${alarm.message}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 设置确认按钮
+                const ackBtn = document.getElementById('acknowledge-alarm-btn');
+                ackBtn.style.display = alarm.is_acknowledged ? 'none' : 'block';
+                ackBtn.onclick = () => this.acknowledgeAlarm(alarmId);
+
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('alarmDetailModal'));
+                modal.show();
+            }
+
+            acknowledgeAlarm(alarmId) {
+                const alarm = this.alarms.find(a => a.alarm_id === alarmId);
+                if (alarm) {
+                    alarm.is_acknowledged = true;
+                    alarm.acknowledged_time = new Date().toISOString();
+                    this.renderAlarms();
+                    this.updateStatistics();
+                    
+                    // 关闭模态框
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('alarmDetailModal'));
+                    if (modal) modal.hide();
+                }
+            }
+
+            acknowledgeAllAlarms() {
+                if (confirm('确定要确认所有未确认的报警吗？')) {
+                    this.alarms.forEach(alarm => {
+                        if (!alarm.is_acknowledged) {
+                            alarm.is_acknowledged = true;
+                            alarm.acknowledged_time = new Date().toISOString();
+                        }
+                    });
+                    this.renderAlarms();
+                    this.updateStatistics();
+                }
+            }
+
+            clearAllAlarms() {
+                if (confirm('确定要清空所有历史报警吗？此操作不可恢复！')) {
+                    this.alarms = [];
+                    this.renderAlarms();
+                    this.updateStatistics();
+                }
+            }
+
+            selectAllAlarms(checked) {
+                const checkboxes = document.querySelectorAll('.alarm-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = checked;
+                    const alarmId = checkbox.dataset.alarmId;
+                    if (checked) {
+                        this.selectedAlarms.add(alarmId);
+                    } else {
+                        this.selectedAlarms.delete(alarmId);
+                    }
+                });
+            }
+
+            saveAlarmRules() {
+                // 收集规则设置
+                this.alarmRules.temperature.warning = parseFloat(document.getElementById('temp-warning').value);
+                this.alarmRules.temperature.critical = parseFloat(document.getElementById('temp-critical').value);
+                this.alarmRules.temperature.enabled = document.getElementById('temp-enabled').checked;
+                
+                this.alarmRules.vibration.warning = parseFloat(document.getElementById('vib-warning').value);
+                this.alarmRules.vibration.critical = parseFloat(document.getElementById('vib-critical').value);
+                this.alarmRules.vibration.enabled = document.getElementById('vib-enabled').checked;
+                
+                this.alarmRules.current.overload = parseFloat(document.getElementById('current-overload').value);
+                this.alarmRules.current.underload = parseFloat(document.getElementById('current-underload').value);
+                this.alarmRules.current.enabled = document.getElementById('current-enabled').checked;
+
+                // 这里应该发送到后端保存
+                console.log('保存报警规则:', this.alarmRules);
+                
+                // 显示成功消息
+                this.showToast('报警规则已保存', 'success');
+            }
+
+            initCharts() {
+                // 初始化报警趋势图
+                const container = document.getElementById('alarm-trend-chart');
+                if (!container) return;
+
+                const chart = echarts.init(container);
+                
+                // 生成最近24小时的数据
+                const hours = [];
+                const criticalData = [];
+                const warningData = [];
+                const infoData = [];
+
+                for (let i = 23; i >= 0; i--) {
+                    const hour = new Date(Date.now() - i * 60 * 60 * 1000);
+                    hours.push(hour.getHours() + ':00');
+                    criticalData.push(Math.floor(Math.random() * 3));
+                    warningData.push(Math.floor(Math.random() * 5));
+                    infoData.push(Math.floor(Math.random() * 2));
+                }
+
+                const option = {
+                    title: {
+                        text: '24小时报警趋势',
+                        left: 'center',
+                        textStyle: { fontSize: 14 }
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['严重', '警告', '信息'],
+                        bottom: 0
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: hours,
+                        axisLabel: { fontSize: 10 }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: { fontSize: 10 }
+                    },
+                    series: [
+                        {
+                            name: '严重',
+                            type: 'bar',
+                            stack: 'total',
+                            data: criticalData,
+                            itemStyle: { color: '#dc3545' }
+                        },
+                        {
+                            name: '警告',
+                            type: 'bar',
+                            stack: 'total',
+                            data: warningData,
+                            itemStyle: { color: '#ffc107' }
+                        },
+                        {
+                            name: '信息',
+                            type: 'bar',
+                            stack: 'total',
+                            data: infoData,
+                            itemStyle: { color: '#0dcaf0' }
+                        }
+                    ]
+                };
+
+                chart.setOption(option);
+                
+                // 响应式调整
+                window.addEventListener('resize', () => {
+                    chart.resize();
+                });
+            }
+
+            startUpdates() {
+                // 定期刷新数据
+                setInterval(() => {
+                    this.loadAlarms();
+                }, 30000);
+            }
+
+            playAlarmSound(level) {
+                // 创建音频上下文播放报警声音
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    // 根据报警级别设置不同频率
+                    const frequencies = {
+                        'CRITICAL': 800,
+                        'WARNING': 600,
+                        'INFO': 400
+                    };
+                    
+                    oscillator.frequency.setValueAtTime(frequencies[level] || 500, audioContext.currentTime);
+                    oscillator.type = 'square';
+                    
+                    const volume = this.notifications.volume / 100;
+                    gainNode.gain.setValueAtTime(volume * 0.1, audioContext.currentTime);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                } catch (error) {
+                    console.warn('无法播放报警声音:', error);
+                }
+            }
+
+            showDesktopNotification(alarm) {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    const notification = new Notification(`${alarm.level} 报警`, {
+                        body: `机床 ${alarm.machine_id}: ${alarm.message}`,
+                        icon: '/static/images/alarm-icon.png',
+                        tag: alarm.alarm_id
+                    });
+                    
+                    setTimeout(() => notification.close(), 5000);
+                } else if ('Notification' in window && Notification.permission !== 'denied') {
+                    Notification.requestPermission();
+                }
+            }
+
+            showToast(message, type = 'info') {
+                // 创建简单的Toast通知
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type} position-fixed`;
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                toast.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>${message}</span>
+                        <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+
+            // 辅助方法
+            getAlarmLevelClass(level) {
+                const classMap = {
+                    'CRITICAL': 'bg-danger',
+                    'WARNING': 'bg-warning',
+                    'INFO': 'bg-info'
+                };
+                return classMap[level] || 'bg-secondary';
+            }
+
+            getAlarmLevelBootstrapClass(level) {
+                const classMap = {
+                    'CRITICAL': 'danger',
+                    'WARNING': 'warning',
+                    'INFO': 'info'
+                };
+                return classMap[level] || 'secondary';
+            }
+
+            getAlarmTypeText(type) {
+                const typeMap = {
+                    'TEMPERATURE_HIGH': '温度过高',
+                    'TEMPERATURE_LOW': '温度过低',
+                    'VIBRATION_HIGH': '振动异常',
+                    'CURRENT_OVERLOAD': '电流过载',
+                    'CURRENT_UNDERLOAD': '电流不足',
+                    'SPEED_ABNORMAL': '转速异常',
+                    'PRESSURE_HIGH': '压力过高',
+                    'PRESSURE_LOW': '压力过低',
+                    'COMMUNICATION_ERROR': '通信故障',
+                    'SYSTEM_ERROR': '系统错误'
+                };
+                return typeMap[type] || type;
+            }
+
+            getParameterUnit(parameter) {
+                const unitMap = {
+                    'temperature': '°C',
+                    'vibration': 'mm/s',
+                    'current': 'A',
+                    'speed': 'rpm',
+                    'pressure': 'bar'
+                };
+                return unitMap[parameter] || '';
+            }
+
+            acknowledgeSelectedAlarm() {
+                // 这个方法在模态框中使用，通过onclick设置
+            }
+        }
+
+        // 初始化报警管理应用
+        const alarmsApp = new AlarmsApp();
+    </script>
+</body>
+</html>

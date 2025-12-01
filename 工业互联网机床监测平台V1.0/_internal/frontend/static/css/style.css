@@ -1,0 +1,556 @@
+/* 工业互联网机床状态监测平台 - 样式文件 */
+
+/* 全局样式 */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+/* 导航栏样式 */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.navbar-brand i {
+    margin-right: 8px;
+    color: #ffc107;
+}
+
+/* 标签页内容 */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+}
+
+/* 状态指示器 */
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-running {
+    background-color: #28a745;
+    animation: pulse 2s infinite;
+}
+
+.status-idle {
+    background-color: #ffc107;
+}
+
+.status-error {
+    background-color: #dc3545;
+    animation: blink 1s infinite;
+}
+
+.status-offline {
+    background-color: #6c757d;
+}
+
+.status-maintenance {
+    background-color: #17a2b8;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0.3;
+    }
+}
+
+/* 机床状态项 */
+.machine-status-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.machine-status-item:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+    cursor: pointer;
+}
+
+.machine-status-item .machine-id {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.machine-status-item .machine-type {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.machine-status-item .status-row {
+    margin-top: 8px;
+}
+
+.machine-status-item .metric {
+    font-size: 0.75rem;
+    margin-right: 12px;
+}
+
+.machine-status-item .metric-label {
+    color: #6c757d;
+}
+
+.machine-status-item .metric-value {
+    font-weight: bold;
+    color: #495057;
+}
+
+/* 报警项样式 */
+.alarm-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 4px solid;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+.alarm-item.level-critical {
+    border-left-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+.alarm-item.level-error {
+    border-left-color: #fd7e14;
+    background-color: #fff3cd;
+}
+
+.alarm-item.level-warning {
+    border-left-color: #ffc107;
+    background-color: #fff3cd;
+}
+
+.alarm-item.level-info {
+    border-left-color: #17a2b8;
+    background-color: #d1ecf1;
+}
+
+.alarm-item .alarm-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.alarm-item .alarm-machine {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.alarm-item .alarm-message {
+    margin-top: 4px;
+    font-size: 0.875rem;
+}
+
+.alarm-item .alarm-level {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #fff;
+}
+
+.alarm-level.critical {
+    background-color: #dc3545;
+}
+
+.alarm-level.error {
+    background-color: #fd7e14;
+}
+
+.alarm-level.warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.alarm-level.info {
+    background-color: #17a2b8;
+}
+
+/* 连接状态指示器 */
+#connection-status {
+    margin-right: 8px;
+}
+
+#connection-status.connected {
+    color: #28a745;
+}
+
+#connection-status.disconnected {
+    color: #dc3545;
+}
+
+#connection-status.connecting {
+    color: #ffc107;
+    animation: pulse 1s infinite;
+}
+
+/* 表格样式 */
+.table th {
+    border-top: none;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* 按钮样式 */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* 徽章样式 */
+.badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* 进度条样式 */
+.progress {
+    height: 8px;
+    border-radius: 4px;
+}
+
+.progress-bar {
+    border-radius: 4px;
+}
+
+/* 健康评分样式 */
+.health-score {
+    font-weight: bold;
+}
+
+.health-score.excellent {
+    color: #28a745;
+}
+
+.health-score.good {
+    color: #20c997;
+}
+
+.health-score.fair {
+    color: #ffc107;
+}
+
+.health-score.poor {
+    color: #fd7e14;
+}
+
+.health-score.critical {
+    color: #dc3545;
+}
+
+/* 数字孪生控制面板 */
+.twin-control-panel {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.twin-control-panel .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.twin-control-panel .form-range {
+    margin-top: 8px;
+}
+
+/* Three.js 容器 */
+#three-js-container {
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+#three-js-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* 图表容器 */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .machine-status-item {
+        padding: 8px;
+    }
+    
+    .alarm-item {
+        padding: 8px;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-sm {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem;
+    }
+    
+    .machine-status-item .metric {
+        display: block;
+        margin-bottom: 4px;
+    }
+    
+    #three-js-container {
+        height: 300px !important;
+    }
+}
+
+/* 加载动画 */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: #007bff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 工具提示样式 */
+.tooltip {
+    font-size: 0.875rem;
+}
+
+.tooltip-inner {
+    max-width: 300px;
+    text-align: left;
+}
+
+/* 模态框样式 */
+.modal-header {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 数据可视化样式 */
+.metric-card {
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-bottom: 20px;
+}
+
+.metric-card h3 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+
+.metric-card p {
+    margin-bottom: 0;
+    opacity: 0.9;
+}
+
+/* 状态标签 */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.running {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-badge.idle {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.offline {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.status-badge.maintenance {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* 实时数据指示器 */
+.realtime-indicator {
+    position: relative;
+    display: inline-block;
+}
+
+.realtime-indicator::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -8px;
+    width: 6px;
+    height: 6px;
+    background-color: #28a745;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+/* 数据更新动画 */
+.data-updated {
+    animation: highlight 0.5s ease-in-out;
+}
+
+@keyframes highlight {
+    0% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* 错误状态样式 */
+.error-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 8px;
+}
+
+.success-message {
+    color: #28a745;
+    font-size: 0.875rem;
+    margin-top: 8px;
+}
+
+/* 空状态样式 */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h5 {
+    margin-bottom: 8px;
+    color: #495057;
+}
+
+.empty-state p {
+    margin-bottom: 0;
+    font-size: 0.875rem;
+}

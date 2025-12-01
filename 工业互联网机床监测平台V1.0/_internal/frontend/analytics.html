@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析 - 工业互联网机床状态监测平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-industry"></i>
+                工业互联网机床监测平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">
+                    <i class="fas fa-tachometer-alt"></i> 仪表盘
+                </a>
+                <a class="nav-link" href="/machines">
+                    <i class="fas fa-cogs"></i> 机床管理
+                </a>
+                <a class="nav-link" href="/digital-twin">
+                    <i class="fas fa-cube"></i> 数字孪生
+                </a>
+                <a class="nav-link" href="/database">
+                    <i class="fas fa-database"></i> 数据库管理
+                </a>
+                <a class="nav-link" href="/alarms">
+                    <i class="fas fa-exclamation-triangle"></i> 报警管理
+                </a>
+                <a class="nav-link active" href="/analytics">
+                    <i class="fas fa-chart-line"></i> 数据分析
+                </a>
+                <span class="navbar-text">
+                    <i class="fas fa-wifi" id="connection-status"></i>
+                    <span id="connection-text">连接中...</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <div class="container-fluid mt-3">
+        <!-- 分析控制面板 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-filter"></i> 分析控制面板
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">时间范围</label>
+                                <select class="form-select" id="time-range">
+                                    <option value="1h">最近1小时</option>
+                                    <option value="6h">最近6小时</option>
+                                    <option value="24h" selected>最近24小时</option>
+                                    <option value="7d">最近7天</option>
+                                    <option value="30d">最近30天</option>
+                                    <option value="custom">自定义</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">机床选择</label>
+                                <select class="form-select" id="machine-select">
+                                    <option value="all">全部机床</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">参数类型</label>
+                                <select class="form-select" id="parameter-type">
+                                    <option value="all">全部参数</option>
+                                    <option value="temperature">温度</option>
+                                    <option value="vibration">振动</option>
+                                    <option value="current">电流</option>
+                                    <option value="speed">转速</option>
+                                    <option value="pressure">压力</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">分析类型</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="analysis-type" id="trend-analysis" value="trend" checked>
+                                    <label class="btn btn-outline-primary" for="trend-analysis">趋势</label>
+                                    
+                                    <input type="radio" class="btn-check" name="analysis-type" id="correlation-analysis" value="correlation">
+                                    <label class="btn btn-outline-primary" for="correlation-analysis">相关性</label>
+                                    
+                                    <input type="radio" class="btn-check" name="analysis-type" id="efficiency-analysis" value="efficiency">
+                                    <label class="btn btn-outline-primary" for="efficiency-analysis">效率</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button class="btn btn-primary" id="analyze-btn">
+                                    <i class="fas fa-chart-line"></i> 开始分析
+                                </button>
+                                <button class="btn btn-outline-secondary" id="export-btn">
+                                    <i class="fas fa-download"></i> 导出报告
+                                </button>
+                                <button class="btn btn-outline-info" id="refresh-data-btn">
+                                    <i class="fas fa-sync-alt"></i> 刷新数据
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分析结果展示 -->
+        <div class="row">
+            <!-- 主要图表区域 -->
+            <div class="col-md-8">
+                <!-- 趋势分析图表 -->
+                <div class="card mb-4" id="trend-chart-card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">参数趋势分析</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="trend-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+
+                <!-- 相关性分析图表 -->
+                <div class="card mb-4" id="correlation-chart-card" style="display: none;">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">参数相关性分析</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="correlation-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+
+                <!-- 效率分析图表 -->
+                <div class="card mb-4" id="efficiency-chart-card" style="display: none;">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">设备效率分析</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="efficiency-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+
+                <!-- 统计分析表格 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">统计分析结果</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>参数</th>
+                                        <th>平均值</th>
+                                        <th>最大值</th>
+                                        <th>最小值</th>
+                                        <th>标准差</th>
+                                        <th>变异系数</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="statistics-table-body">
+                                    <!-- 统计数据将通过JavaScript动态添加 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 侧边栏 -->
+            <div class="col-md-4">
+                <!-- 关键指标 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">关键指标</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <div class="h4 text-primary" id="avg-efficiency">85%</div>
+                                    <small class="text-muted">平均效率</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <div class="h4 text-success" id="uptime">98.5%</div>
+                                    <small class="text-muted">设备正常运行率</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <div class="h4 text-warning" id="avg-temperature">45.2°C</div>
+                                    <small class="text-muted">平均温度</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="text-center">
+                                    <div class="h4 text-info" id="total-alarms">12</div>
+                                    <small class="text-muted">总报警数</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 机床性能排名 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">机床性能排名</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="performance-ranking">
+                            <!-- 排名数据将通过JavaScript动态添加 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 预测分析 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">预测分析</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="prediction-chart" style="height: 200px;"></div>
+                        <div class="mt-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>预测结果:</strong> 基于历史数据分析，预计未来24小时内设备运行状态良好，建议关注CNC001的温度变化。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 异常检测 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">异常检测</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="anomaly-detection">
+                            <div class="anomaly-item mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-warning">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        CNC001 温度异常
+                                    </span>
+                                    <small class="text-muted">2分钟前</small>
+                                </div>
+                                <small class="text-muted">检测到温度波动超出正常范围</small>
+                            </div>
+                            <div class="anomaly-item mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        MILL001 效率提升
+                                    </span>
+                                    <small class="text-muted">15分钟前</small>
+                                </div>
+                                <small class="text-muted">设备效率较昨日同期提升5%</small>
+                            </div>
+                            <div class="anomaly-item">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-success">
+                                        <i class="fas fa-check-circle"></i>
+                                        DRILL001 运行正常
+                                    </span>
+                                    <small class="text-muted">30分钟前</small>
+                                </div>
+                                <small class="text-muted">所有参数均在正常范围内</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script>
+        // 数据分析应用
+        class AnalyticsApp {
+            constructor() {
+                this.machines = new Map();
+                this.historicalData = [];
+                this.currentAnalysisType = 'trend';
+                this.charts = {};
+                
+                this.init();
+            }
+
+            async init() {
+                console.log('初始化数据分析...');
+                
+                // 连接WebSocket
+                if (window.wsManager) {
+                    window.wsManager.on('machine_data', (message) => {
+                        this.updateMachineData(message.machine_id, message.data);
+                    });
+                }
+
+                // 绑定事件
+                this.bindEvents();
+                
+                // 加载机床数据
+                await this.loadMachines();
+                
+                // 生成模拟历史数据
+                this.generateHistoricalData();
+                
+                // 初始化图表
+                this.initCharts();
+                
+                // 执行初始分析
+                this.performAnalysis();
+            }
+
+            bindEvents() {
+                // 分析按钮
+                document.getElementById('analyze-btn').addEventListener('click', () => {
+                    this.performAnalysis();
+                });
+
+                // 导出按钮
+                document.getElementById('export-btn').addEventListener('click', () => {
+                    this.exportReport();
+                });
+
+                // 刷新数据按钮
+                document.getElementById('refresh-data-btn').addEventListener('click', () => {
+                    this.refreshData();
+                });
+
+                // 分析类型切换
+                document.querySelectorAll('input[name="analysis-type"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        this.currentAnalysisType = e.target.value;
+                        this.switchAnalysisView();
+                    });
+                });
+
+                // 参数变化监听
+                ['time-range', 'machine-select', 'parameter-type'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => {
+                        this.performAnalysis();
+                    });
+                });
+            }
+
+            async loadMachines() {
+                try {
+                    const response = await fetch('/api/machines');
+                    const data = await response.json();
+                    
+                    if (data.machines) {
+                        this.machines.clear();
+                    data.machines.forEach(machine => {
+                        this.machines.set(machine.id, machine);
+                    });
+                        this.updateMachineSelect();
+                    }
+                } catch (error) {
+                    console.error('加载机床数据失败:', error);
+                }
+            }
+
+            updateMachineSelect() {
+                const select = document.getElementById('machine-select');
+                const currentValue = select.value;
+                
+                // 清空现有选项（保留"全部机床"）
+                select.innerHTML = '<option value="all">全部机床</option>';
+                
+                // 添加机床选项
+                Array.from(this.machines.values()).forEach(machine => {
+                        const option = document.createElement('option');
+                        option.value = machine.id;
+                        option.textContent = `${machine.id} - ${machine.name || machine.brand + ' ' + machine.model}`;
+                        select.appendChild(option);
+                });
+                
+                // 恢复之前的选择
+                if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+                    select.value = currentValue;
+                }
+            }
+
+            generateHistoricalData() {
+                // 生成最近24小时的模拟数据
+                const now = new Date();
+                const data = [];
+                
+                for (let i = 0; i < 144; i++) { // 每10分钟一个数据点
+                    const timestamp = new Date(now.getTime() - i * 10 * 60 * 1000);
+                    
+                    Array.from(this.machines.keys()).forEach(machineId => {
+                        data.push({
+                            timestamp: timestamp.toISOString(),
+                            machine_id: machineId,
+                            temperature: 40 + Math.random() * 20 + Math.sin(i * 0.1) * 5,
+                            vibration: 1 + Math.random() * 2 + Math.sin(i * 0.05) * 0.5,
+                            current: 10 + Math.random() * 10 + Math.sin(i * 0.08) * 3,
+                            speed: 800 + Math.random() * 400 + Math.sin(i * 0.06) * 100,
+                            pressure: 4 + Math.random() * 4 + Math.sin(i * 0.04) * 1,
+                            efficiency: 80 + Math.random() * 15 + Math.sin(i * 0.03) * 5
+                        });
+                    });
+                }
+                
+                this.historicalData = data.reverse(); // 按时间正序排列
+            }
+
+            initCharts() {
+                // 初始化趋势分析图表
+                this.charts.trend = echarts.init(document.getElementById('trend-chart'));
+                
+                // 初始化相关性分析图表
+                this.charts.correlation = echarts.init(document.getElementById('correlation-chart'));
+                
+                // 初始化效率分析图表
+                this.charts.efficiency = echarts.init(document.getElementById('efficiency-chart'));
+                
+                // 初始化预测分析图表
+                this.charts.prediction = echarts.init(document.getElementById('prediction-chart'));
+                
+                // 响应式调整
+                window.addEventListener('resize', () => {
+                    Object.values(this.charts).forEach(chart => {
+                        chart.resize();
+                    });
+                });
+            }
+
+            switchAnalysisView() {
+                // 隐藏所有图表卡片
+                document.getElementById('trend-chart-card').style.display = 'none';
+                document.getElementById('correlation-chart-card').style.display = 'none';
+                document.getElementById('efficiency-chart-card').style.display = 'none';
+                
+                // 显示当前分析类型的图表
+                document.getElementById(`${this.currentAnalysisType}-chart-card`).style.display = 'block';
+                
+                // 执行相应的分析
+                this.performAnalysis();
+            }
+
+            performAnalysis() {
+                switch (this.currentAnalysisType) {
+                    case 'trend':
+                        this.performTrendAnalysis();
+                        break;
+                    case 'correlation':
+                        this.performCorrelationAnalysis();
+                        break;
+                    case 'efficiency':
+                        this.performEfficiencyAnalysis();
+                        break;
+                }
+                
+                this.updateStatistics();
+                this.updateKeyMetrics();
+                this.updatePerformanceRanking();
+                this.updatePredictionChart();
+            }
+
+            performTrendAnalysis() {
+                const timeRange = document.getElementById('time-range').value;
+                const selectedMachine = document.getElementById('machine-select').value;
+                const parameterType = document.getElementById('parameter-type').value;
+                
+                // 过滤数据
+                let filteredData = this.historicalData;
+                
+                if (selectedMachine !== 'all') {
+                    filteredData = filteredData.filter(d => d.machine_id === selectedMachine);
+                }
+                
+                // 根据时间范围过滤
+                const now = new Date();
+                const timeRangeMs = this.getTimeRangeMs(timeRange);
+                filteredData = filteredData.filter(d => 
+                    new Date(d.timestamp) > new Date(now.getTime() - timeRangeMs)
+                );
+                
+                // 准备图表数据
+                const times = [...new Set(filteredData.map(d => d.timestamp))].sort();
+                const series = [];
+                
+                if (parameterType === 'all') {
+                    const parameters = ['temperature', 'vibration', 'current', 'speed', 'pressure'];
+                    parameters.forEach(param => {
+                        const machineData = {};
+                        
+                        filteredData.forEach(d => {
+                            if (!machineData[d.machine_id]) {
+                                machineData[d.machine_id] = [];
+                            }
+                            machineData[d.machine_id].push({
+                                time: d.timestamp,
+                                value: d[param]
+                            });
+                        });
+                        
+                        Object.keys(machineData).forEach(machineId => {
+                            series.push({
+                                name: `${machineId}-${param}`,
+                                type: 'line',
+                                data: times.map(time => {
+                                    const dataPoint = machineData[machineId].find(d => d.time === time);
+                                    return dataPoint ? dataPoint.value.toFixed(2) : null;
+                                }),
+                                smooth: true
+                            });
+                        });
+                    });
+                } else {
+                    const machineData = {};
+                    
+                    filteredData.forEach(d => {
+                        if (!machineData[d.machine_id]) {
+                            machineData[d.machine_id] = [];
+                        }
+                        machineData[d.machine_id].push({
+                            time: d.timestamp,
+                            value: d[parameterType]
+                        });
+                    });
+                    
+                    Object.keys(machineData).forEach(machineId => {
+                        series.push({
+                            name: machineId,
+                            type: 'line',
+                            data: times.map(time => {
+                                const dataPoint = machineData[machineId].find(d => d.time === time);
+                                return dataPoint ? dataPoint.value.toFixed(2) : null;
+                            }),
+                            smooth: true
+                        });
+                    });
+                }
+                
+                const option = {
+                    title: {
+                        text: '参数趋势分析',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: series.map(s => s.name),
+                        top: 30,
+                        type: 'scroll'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: times.map(t => new Date(t).toLocaleTimeString()),
+                        axisLabel: {
+                            rotate: 45
+                        }
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: series,
+                    dataZoom: [
+                        {
+                            type: 'slider',
+                            start: 70,
+                            end: 100
+                        }
+                    ]
+                };
+                
+                this.charts.trend.setOption(option);
+            }
+
+            performCorrelationAnalysis() {
+                // 计算参数间的相关性
+                const parameters = ['temperature', 'vibration', 'current', 'speed', 'pressure'];
+                const correlationMatrix = [];
+                
+                parameters.forEach((param1, i) => {
+                    correlationMatrix[i] = [];
+                    parameters.forEach((param2, j) => {
+                        const correlation = this.calculateCorrelation(param1, param2);
+                        correlationMatrix[i][j] = correlation;
+                    });
+                });
+                
+                const option = {
+                    title: {
+                        text: '参数相关性热力图',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        position: 'top'
+                    },
+                    grid: {
+                        height: '50%',
+                        top: '10%'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: parameters,
+                        splitArea: {
+                            show: true
+                        }
+                    },
+                    yAxis: {
+                        type: 'category',
+                        data: parameters,
+                        splitArea: {
+                            show: true
+                        }
+                    },
+                    visualMap: {
+                        min: -1,
+                        max: 1,
+                        calculable: true,
+                        orient: 'horizontal',
+                        left: 'center',
+                        bottom: '15%',
+                        inRange: {
+                            color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                        }
+                    },
+                    series: [{
+                        name: '相关性',
+                        type: 'heatmap',
+                        data: correlationMatrix.flatMap((row, i) => 
+                            row.map((value, j) => [j, i, value.toFixed(3)])
+                        ),
+                        label: {
+                            show: true
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                };
+                
+                this.charts.correlation.setOption(option);
+            }
+
+            performEfficiencyAnalysis() {
+                const machineEfficiency = {};
+                
+                // 计算每台机床的效率统计
+                Array.from(this.machines.keys()).forEach(machineId => {
+                    const machineData = this.historicalData.filter(d => d.machine_id === machineId);
+                    const efficiencies = machineData.map(d => d.efficiency);
+                    
+                    machineEfficiency[machineId] = {
+                        avg: efficiencies.reduce((a, b) => a + b, 0) / efficiencies.length,
+                        max: Math.max(...efficiencies),
+                        min: Math.min(...efficiencies),
+                        trend: this.calculateTrend(efficiencies)
+                    };
+                });
+                
+                const option = {
+                    title: {
+                        text: '设备效率分析',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    legend: {
+                        data: ['平均效率', '最高效率', '最低效率'],
+                        top: 30
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: Object.keys(machineEfficiency)
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '效率 (%)'
+                    },
+                    series: [
+                        {
+                            name: '平均效率',
+                            type: 'bar',
+                            data: Object.values(machineEfficiency).map(e => e.avg.toFixed(1))
+                        },
+                        {
+                            name: '最高效率',
+                            type: 'bar',
+                            data: Object.values(machineEfficiency).map(e => e.max.toFixed(1))
+                        },
+                        {
+                            name: '最低效率',
+                            type: 'bar',
+                            data: Object.values(machineEfficiency).map(e => e.min.toFixed(1))
+                        }
+                    ]
+                };
+                
+                this.charts.efficiency.setOption(option);
+            }
+
+            updateStatistics() {
+                const tbody = document.getElementById('statistics-table-body');
+                const parameters = ['temperature', 'vibration', 'current', 'speed', 'pressure'];
+                
+                const html = parameters.map(param => {
+                    const values = this.historicalData.map(d => d[param]);
+                    const stats = this.calculateStatistics(values);
+                    
+                    return `
+                        <tr>
+                            <td>${this.getParameterName(param)}</td>
+                            <td>${stats.mean.toFixed(2)}${this.getParameterUnit(param)}</td>
+                            <td>${stats.max.toFixed(2)}${this.getParameterUnit(param)}</td>
+                            <td>${stats.min.toFixed(2)}${this.getParameterUnit(param)}</td>
+                            <td>${stats.stdDev.toFixed(2)}</td>
+                            <td>${stats.cv.toFixed(2)}%</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                tbody.innerHTML = html;
+            }
+
+            updateKeyMetrics() {
+                // 计算关键指标
+                const efficiencies = this.historicalData.map(d => d.efficiency);
+                const temperatures = this.historicalData.map(d => d.temperature);
+                
+                const avgEfficiency = efficiencies.reduce((a, b) => a + b, 0) / efficiencies.length;
+                const avgTemperature = temperatures.reduce((a, b) => a + b, 0) / temperatures.length;
+                
+                document.getElementById('avg-efficiency').textContent = `${avgEfficiency.toFixed(1)}%`;
+                document.getElementById('avg-temperature').textContent = `${avgTemperature.toFixed(1)}°C`;
+                
+                // 模拟其他指标
+                document.getElementById('uptime').textContent = '98.5%';
+                document.getElementById('total-alarms').textContent = '12';
+            }
+
+            updatePerformanceRanking() {
+                const container = document.getElementById('performance-ranking');
+                if (!container) return;
+
+                // 计算机床性能排名
+                const rankings = Array.from(this.machines.keys()).map(machineId => {
+                    const machineData = this.historicalData.filter(d => d.machine_id === machineId);
+                    const avgEfficiency = machineData.reduce((sum, d) => sum + d.efficiency, 0) / machineData.length;
+                    
+                    return {
+                        machineId,
+                        efficiency: avgEfficiency,
+                        status: this.machines.get(machineId)?.status || 'UNKNOWN'
+                    };
+                }).sort((a, b) => b.efficiency - a.efficiency);
+
+                const html = rankings.map((rank, index) => {
+                    const medalClass = index === 0 ? 'text-warning' : index === 1 ? 'text-secondary' : index === 2 ? 'text-warning' : 'text-muted';
+                    const statusClass = rank.status === 'RUNNING' ? 'text-success' : 'text-muted';
+                    
+                    return `
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="${medalClass}">
+                                    <i class="fas fa-medal"></i>
+                                </span>
+                                <strong>${rank.machineId}</strong>
+                                <small class="${statusClass}">(${rank.status})</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">${rank.efficiency.toFixed(1)}%</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = html;
+            }
+
+            updatePredictionChart() {
+                // 生成预测数据
+                const hours = [];
+                const predictedEfficiency = [];
+                
+                for (let i = 0; i < 24; i++) {
+                    const hour = new Date(Date.now() + i * 60 * 60 * 1000);
+                    hours.push(hour.getHours() + ':00');
+                    predictedEfficiency.push(85 + Math.sin(i * 0.2) * 5 + Math.random() * 3);
+                }
+
+                const option = {
+                    title: {
+                        text: '24小时效率预测',
+                        left: 'center',
+                        textStyle: { fontSize: 12 }
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: hours,
+                        axisLabel: { fontSize: 10 }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '效率(%)',
+                        axisLabel: { fontSize: 10 }
+                    },
+                    series: [{
+                        name: '预测效率',
+                        type: 'line',
+                        data: predictedEfficiency.map(v => v.toFixed(1)),
+                        smooth: true,
+                        itemStyle: { color: '#28a745' },
+                        areaStyle: { opacity: 0.3 }
+                    }]
+                };
+
+                this.charts.prediction.setOption(option);
+            }
+
+            // 辅助方法
+            getTimeRangeMs(range) {
+                const ranges = {
+                    '1h': 60 * 60 * 1000,
+                    '6h': 6 * 60 * 60 * 1000,
+                    '24h': 24 * 60 * 60 * 1000,
+                    '7d': 7 * 24 * 60 * 60 * 1000,
+                    '30d': 30 * 24 * 60 * 60 * 1000
+                };
+                return ranges[range] || ranges['24h'];
+            }
+
+            calculateCorrelation(param1, param2) {
+                const data1 = this.historicalData.map(d => d[param1]);
+                const data2 = this.historicalData.map(d => d[param2]);
+                
+                const n = data1.length;
+                const sum1 = data1.reduce((a, b) => a + b, 0);
+                const sum2 = data2.reduce((a, b) => a + b, 0);
+                const sum1Sq = data1.reduce((a, b) => a + b * b, 0);
+                const sum2Sq = data2.reduce((a, b) => a + b * b, 0);
+                const pSum = data1.reduce((sum, val, i) => sum + val * data2[i], 0);
+                
+                const num = pSum - (sum1 * sum2 / n);
+                const den = Math.sqrt((sum1Sq - sum1 * sum1 / n) * (sum2Sq - sum2 * sum2 / n));
+                
+                return den === 0 ? 0 : num / den;
+            }
+
+            calculateStatistics(values) {
+                const n = values.length;
+                const mean = values.reduce((a, b) => a + b, 0) / n;
+                const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+                const stdDev = Math.sqrt(variance);
+                const cv = (stdDev / mean) * 100;
+                
+                return {
+                    mean,
+                    max: Math.max(...values),
+                    min: Math.min(...values),
+                    stdDev,
+                    cv
+                };
+            }
+
+            calculateTrend(values) {
+                // 简单线性回归计算趋势
+                const n = values.length;
+                const x = Array.from({length: n}, (_, i) => i);
+                const sumX = x.reduce((a, b) => a + b, 0);
+                const sumY = values.reduce((a, b) => a + b, 0);
+                const sumXY = x.reduce((sum, xi, i) => sum + xi * values[i], 0);
+                const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
+                
+                const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+                return slope;
+            }
+
+            getParameterName(param) {
+                const names = {
+                    'temperature': '温度',
+                    'vibration': '振动',
+                    'current': '电流',
+                    'speed': '转速',
+                    'pressure': '压力'
+                };
+                return names[param] || param;
+            }
+
+            getParameterUnit(param) {
+                const units = {
+                    'temperature': '°C',
+                    'vibration': 'mm/s',
+                    'current': 'A',
+                    'speed': 'rpm',
+                    'pressure': 'bar'
+                };
+                return units[param] || '';
+            }
+
+            updateMachineData(machineId, data) {
+                this.machines.set(machineId, data);
+                
+                // 添加到历史数据
+                this.historicalData.push({
+                    timestamp: new Date().toISOString(),
+                    machine_id: machineId,
+                    ...data,
+                    efficiency: data.efficiency || 85
+                });
+                
+                // 保持数据量在合理范围内
+                if (this.historicalData.length > 1000) {
+                    this.historicalData = this.historicalData.slice(-1000);
+                }
+            }
+
+            refreshData() {
+                this.generateHistoricalData();
+                this.performAnalysis();
+            }
+
+            exportReport() {
+                // 生成分析报告
+                const report = {
+                    timestamp: new Date().toISOString(),
+                    analysisType: this.currentAnalysisType,
+                    machines: Array.from(this.machines.keys()),
+                    statistics: {},
+                    summary: '数据分析报告已生成'
+                };
+
+                // 创建下载链接
+                const dataStr = JSON.stringify(report, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `analysis_report_${new Date().toISOString().slice(0, 10)}.json`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // 初始化数据分析应用
+        const analyticsApp = new AnalyticsApp();
+    </script>
+</body>
+</html>

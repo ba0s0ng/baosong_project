@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪表盘 - 工业互联网机床状态监测平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-industry"></i>
+                工业互联网机床监测平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link active" href="/dashboard">
+                    <i class="fas fa-tachometer-alt"></i> 仪表盘
+                </a>
+                <a class="nav-link" href="/machines">
+                    <i class="fas fa-cogs"></i> 机床管理
+                </a>
+                <a class="nav-link" href="/digital-twin">
+                    <i class="fas fa-cube"></i> 数字孪生
+                </a>
+                <a class="nav-link" href="/database">
+                    <i class="fas fa-database"></i> 数据库管理
+                </a>
+                <a class="nav-link" href="/alarms">
+                    <i class="fas fa-exclamation-triangle"></i> 报警管理
+                </a>
+                <a class="nav-link" href="/analytics">
+                    <i class="fas fa-chart-line"></i> 数据分析
+                </a>
+                <span class="navbar-text">
+                    <i class="fas fa-wifi" id="connection-status"></i>
+                    <span id="connection-text">连接中...</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <div class="container-fluid mt-3">
+        <!-- 系统状态卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">在线机床</h6>
+                                <h3 id="online-machines">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-server fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">运行中</h6>
+                                <h3 id="running-machines">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-play fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">活跃报警</h6>
+                                <h3 id="active-alarms">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">平均效率</h6>
+                                <h3 id="avg-efficiency">0%</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-chart-pie fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 实时数据图表 -->
+        <div class="row mb-4">
+            <div class="col-md-8 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">实时监测数据</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="realtime-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 机床状态列表 -->
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">机床状态</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div id="machine-status-list">
+                            <!-- 机床状态项将通过JavaScript动态添加 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最新报警和系统信息 -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">最新报警</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                        <div id="recent-alarms">
+                            <!-- 报警项将通过JavaScript动态添加 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">系统信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="system-info">
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">API状态</small>
+                                    <div id="api-status" class="badge bg-success">正常</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">WebSocket</small>
+                                    <div id="ws-status" class="badge bg-success">已连接</div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <small class="text-muted">规则引擎</small>
+                                    <div id="rule-engine-status" class="badge bg-success">运行中</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">数字孪生</small>
+                                    <div id="digital-twin-status" class="badge bg-success">活跃</div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <small class="text-muted">系统运行时间</small>
+                                    <div id="uptime">00:00:00</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/charts.js"></script>
+    <script>
+        // 仪表盘专用JavaScript
+        class DashboardApp {
+            constructor() {
+                this.machines = new Map();
+                this.alarms = [];
+                this.startTime = new Date();
+                this.init();
+            }
+
+            async init() {
+                console.log('初始化仪表盘...');
+                
+                // 连接WebSocket
+                if (window.wsManager) {
+                    window.wsManager.on('machine_data', (message) => {
+                        if (message.machines) {
+                            // 批量更新所有机床数据
+                            message.machines.forEach(machine => {
+                                this.machines.set(machine.id, machine);
+                            });
+                            this.updateDashboard();
+                        }
+                    });
+                    
+                    window.wsManager.on('machine_update', (message) => {
+                        // 单个机床状态更新
+                        if (message.machine_id && message.data) {
+                            this.updateMachineData(message.machine_id, message.data);
+                        }
+                    });
+                    
+                    window.wsManager.on('alarm', (message) => {
+                        this.addAlarm(message.alarm);
+                    });
+                }
+
+                // 加载初始数据
+                await this.loadData();
+                
+                // 初始化图表
+                this.initCharts();
+                
+                // 启动定时更新
+                this.startUpdates();
+            }
+
+            async loadData() {
+                try {
+                    // 加载机床数据
+                    const machinesResponse = await fetch('/api/machines');
+                    const machinesData = await machinesResponse.json();
+                    
+                    if (machinesData.machines) {
+                        machinesData.machines.forEach(machine => {
+                            this.machines.set(machine.id, machine);
+                        });
+                    }
+
+                    // 加载报警数据
+                    const alarmsResponse = await fetch('/api/alarms');
+                    const alarmsData = await alarmsResponse.json();
+                    
+                    if (alarmsData.alarms) {
+                        this.alarms = alarmsData.alarms;
+                    }
+
+                    this.updateDashboard();
+                } catch (error) {
+                    console.error('加载数据失败:', error);
+                }
+            }
+
+            updateMachineData(machineId, data) {
+                this.machines.set(machineId, data);
+                this.updateDashboard();
+                
+                // 更新实时图表
+                if (window.chartManager) {
+                    window.chartManager.updateRealtimeChart(machineId, data);
+                }
+            }
+
+            addAlarm(alarm) {
+                this.alarms.unshift(alarm);
+                if (this.alarms.length > 50) {
+                    this.alarms = this.alarms.slice(0, 50);
+                }
+                this.updateDashboard();
+            }
+
+            updateDashboard() {
+                this.updateStatCards();
+                this.updateMachineStatusList();
+                this.updateRecentAlarms();
+            }
+
+            updateStatCards() {
+                const onlineMachines = Array.from(this.machines.values()).filter(m => 
+                    m.status && m.status.toLowerCase() !== 'offline'
+                ).length;
+                const runningMachines = Array.from(this.machines.values()).filter(m => 
+                    m.status && m.status.toLowerCase() === 'running'
+                ).length;
+                const activeAlarms = this.alarms.filter(a => !a.is_acknowledged).length;
+                const avgEfficiency = this.calculateAverageEfficiency();
+
+                document.getElementById('online-machines').textContent = onlineMachines;
+                document.getElementById('running-machines').textContent = runningMachines;
+                document.getElementById('active-alarms').textContent = activeAlarms;
+                document.getElementById('avg-efficiency').textContent = `${avgEfficiency}%`;
+            }
+
+            calculateAverageEfficiency() {
+                const runningMachines = Array.from(this.machines.values()).filter(m => 
+                    m.status && m.status.toLowerCase() === 'running'
+                );
+                if (runningMachines.length === 0) return 0;
+
+                const totalEfficiency = runningMachines.reduce((sum, machine) => {
+                    return sum + (machine.efficiency || 85);
+                }, 0);
+
+                return Math.round(totalEfficiency / runningMachines.length);
+            }
+
+            updateMachineStatusList() {
+                const container = document.getElementById('machine-status-list');
+                if (!container) return;
+
+                const html = Array.from(this.machines.values()).map(machine => {
+                    const statusClass = this.getStatusClass(machine.status);
+                    const isSelected = this.selectedMachine === machine.id;
+                    
+                    return `
+                        <div class="machine-status-item ${isSelected ? 'selected' : ''}" 
+                             onclick="dashboardApp.selectMachine('${machine.id}')" 
+                             style="cursor: pointer; ${isSelected ? 'background-color: #e3f2fd; border-left: 4px solid #2196f3;' : ''}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="machine-id">${machine.id}</div>
+                                    <div class="machine-type">${machine.name || machine.brand + ' ' + machine.model}</div>
+                                </div>
+                                <div class="status-indicator ${statusClass}"></div>
+                            </div>
+                            <div class="status-row mt-2">
+                                <small class="text-muted">温度: ${(machine.temperature || 0).toFixed(1)}°C</small><br>
+                                <small class="text-muted">转速: ${(machine.speed || 0).toFixed(0)}rpm</small>
+                            </div>
+                            ${isSelected ? '<div class="text-primary small mt-1"><i class="fas fa-check"></i> 已选中</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = html || '<div class="text-muted">暂无机床数据</div>';
+            }
+
+            selectMachine(machineId) {
+                if (this.selectedMachine === machineId) {
+                    // 如果点击的是已选中的机床，则取消选择
+                    this.selectedMachine = null;
+                } else {
+                    // 选择新的机床
+                    this.selectedMachine = machineId;
+                }
+                
+                // 更新显示
+                this.updateMachineStatusList();
+                
+                // 更新图表标题
+                this.updateChartTitle();
+            }
+
+            updateChartTitle() {
+                if (!this.realtimeChart) return;
+                
+                const title = this.selectedMachine 
+                    ? `实时监测数据 - ${this.selectedMachine}`
+                    : '实时监测数据 - 全部机床平均值';
+                
+                this.realtimeChart.setOption({
+                    title: {
+                        text: title,
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 16
+                        }
+                    }
+                });
+            }
+
+            async syncDataToDatabase() {
+                try {
+                    // 收集当前所有机床的数据
+                    const currentData = Array.from(this.machines.values()).map(machine => ({
+                        machine_id: machine.id,
+                        timestamp: new Date().toISOString(),
+                        temperature: machine.temperature || 0,
+                        vibration: machine.vibration || 0,
+                        current: machine.current || 0,
+                        speed: machine.speed || 0,
+                        pressure: machine.pressure || 0,
+                        efficiency: machine.efficiency || 85,
+                        status: machine.status || 'OFFLINE'
+                    }));
+
+                    // 发送到后端进行持久化
+                    const response = await fetch('/api/database/sync/realtime', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            data: currentData,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (!response.ok) {
+                        console.warn('数据同步失败:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('数据库同步错误:', error);
+                }
+            }
+
+            updateRecentAlarms() {
+                const container = document.getElementById('recent-alarms');
+                if (!container) return;
+
+                const recentAlarms = this.alarms.slice(0, 5);
+                const html = recentAlarms.map(alarm => {
+                    const levelClass = alarm.level.toLowerCase();
+                    const timeStr = new Date(alarm.timestamp).toLocaleString();
+
+                    return `
+                        <div class="alarm-item level-${levelClass} mb-2">
+                            <div class="d-flex justify-content-between">
+                                <strong>${alarm.machine_id}</strong>
+                                <span class="badge bg-${this.getAlarmBadgeClass(alarm.level)}">${alarm.level}</span>
+                            </div>
+                            <div class="small">${alarm.message}</div>
+                            <div class="small text-muted">${timeStr}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = html || '<div class="text-muted">暂无报警信息</div>';
+            }
+
+            getStatusClass(status) {
+                if (!status) return 'status-offline';
+                const normalizedStatus = status.toString().toUpperCase();
+                const statusMap = {
+                    'RUNNING': 'status-running',
+                    'IDLE': 'status-idle',
+                    'ERROR': 'status-error',
+                    'OFFLINE': 'status-offline',
+                    'MAINTENANCE': 'status-maintenance'
+                };
+                return statusMap[normalizedStatus] || 'status-offline';
+            }
+
+            getAlarmBadgeClass(level) {
+                const classMap = {
+                    'CRITICAL': 'danger',
+                    'ERROR': 'warning',
+                    'WARNING': 'warning',
+                    'INFO': 'info'
+                };
+                return classMap[level] || 'secondary';
+            }
+
+            initCharts() {
+                // 初始化实时数据图表
+                const container = document.getElementById('realtime-chart');
+                if (!container) return;
+
+                const chart = echarts.init(container);
+                
+                // 生成初始时间数据
+                const times = [];
+                const temperatures = [];
+                const vibrations = [];
+                const speeds = [];
+                
+                for (let i = 19; i >= 0; i--) {
+                    const time = new Date(Date.now() - i * 30000); // 每30秒一个数据点
+                    times.push(time.toLocaleTimeString());
+                    
+                    // 生成模拟数据
+                    temperatures.push(Math.random() * 20 + 40); // 40-60°C
+                    vibrations.push(Math.random() * 3 + 1); // 1-4mm/s
+                    speeds.push(Math.random() * 1000 + 800); // 800-1800rpm
+                }
+                
+                const option = {
+                    title: {
+                        text: '实时监测数据',
+                        left: 'center',
+                        textStyle: {
+                            fontSize: 16
+                        }
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'cross'
+                        }
+                    },
+                    legend: {
+                        data: ['温度 (°C)', '振动 (mm/s)', '转速 (rpm)'],
+                        top: 30
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: times
+                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '温度/振动',
+                            position: 'left',
+                            axisLabel: {
+                                formatter: '{value}'
+                            }
+                        },
+                        {
+                            type: 'value',
+                            name: '转速',
+                            position: 'right',
+                            axisLabel: {
+                                formatter: '{value} rpm'
+                            }
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '温度 (°C)',
+                            type: 'line',
+                            yAxisIndex: 0,
+                            data: temperatures,
+                            smooth: true,
+                            itemStyle: {
+                                color: '#ff6b6b'
+                            },
+                            areaStyle: {
+                                opacity: 0.3
+                            }
+                        },
+                        {
+                            name: '振动 (mm/s)',
+                            type: 'line',
+                            yAxisIndex: 0,
+                            data: vibrations,
+                            smooth: true,
+                            itemStyle: {
+                                color: '#4ecdc4'
+                            }
+                        },
+                        {
+                            name: '转速 (rpm)',
+                            type: 'line',
+                            yAxisIndex: 1,
+                            data: speeds,
+                            smooth: true,
+                            itemStyle: {
+                                color: '#45b7d1'
+                            }
+                        }
+                    ]
+                };
+
+                chart.setOption(option);
+                this.realtimeChart = chart;
+                
+                // 启动实时数据更新
+                this.startRealtimeDataUpdate();
+
+                // 响应式调整
+                window.addEventListener('resize', () => {
+                    chart.resize();
+                });
+            }
+
+            startRealtimeDataUpdate() {
+                // 每5秒更新一次图表数据
+                this.realtimeUpdateInterval = setInterval(() => {
+                    if (!this.realtimeChart) return;
+                    
+                    const option = this.realtimeChart.getOption();
+                    const times = option.xAxis[0].data;
+                    const tempData = option.series[0].data;
+                    const vibrationData = option.series[1].data;
+                    const speedData = option.series[2].data;
+                    
+                    // 添加新数据点 - 修复时间格式
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('zh-CN', { 
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    times.push(timeStr);
+                    
+                    // 根据选中的机床显示数据，如果没有选中则显示平均值
+                    if (this.selectedMachine) {
+                        const machine = this.machines.get(this.selectedMachine);
+                        if (machine) {
+                            tempData.push(parseFloat((machine.temperature || 0).toFixed(1)));
+                            vibrationData.push(parseFloat((machine.vibration || 0).toFixed(1)));
+                            speedData.push(parseFloat((machine.speed || 0).toFixed(0)));
+                        } else {
+                            // 机床不存在时使用默认值
+                            tempData.push(25);
+                            vibrationData.push(0.5);
+                            speedData.push(0);
+                        }
+                    } else {
+                        // 没有选中机床时显示所有运行中机床的平均值
+                        const runningMachines = Array.from(this.machines.values()).filter(m => 
+                            m.status && m.status.toLowerCase() === 'running'
+                        );
+                        
+                        if (runningMachines.length > 0) {
+                            const avgTemp = runningMachines.reduce((sum, m) => sum + (m.temperature || 0), 0) / runningMachines.length;
+                            const avgVibration = runningMachines.reduce((sum, m) => sum + (m.vibration || 0), 0) / runningMachines.length;
+                            const avgSpeed = runningMachines.reduce((sum, m) => sum + (m.speed || 0), 0) / runningMachines.length;
+                            
+                            tempData.push(parseFloat(avgTemp.toFixed(1)));
+                            vibrationData.push(parseFloat(avgVibration.toFixed(1)));
+                            speedData.push(parseFloat(avgSpeed.toFixed(0)));
+                        } else {
+                            // 如果没有运行中的机床，使用所有机床的平均值
+                            const allMachines = Array.from(this.machines.values());
+                            if (allMachines.length > 0) {
+                                const avgTemp = allMachines.reduce((sum, m) => sum + (m.temperature || 0), 0) / allMachines.length;
+                                const avgVibration = allMachines.reduce((sum, m) => sum + (m.vibration || 0), 0) / allMachines.length;
+                                const avgSpeed = allMachines.reduce((sum, m) => sum + (m.speed || 0), 0) / allMachines.length;
+                                
+                                tempData.push(parseFloat(avgTemp.toFixed(1)));
+                                vibrationData.push(parseFloat(avgVibration.toFixed(1)));
+                                speedData.push(parseFloat(avgSpeed.toFixed(0)));
+                            } else {
+                                tempData.push(25);
+                                vibrationData.push(0.5);
+                                speedData.push(0);
+                            }
+                        }
+                    }
+                    
+                    // 保持最多20个数据点
+                    if (times.length > 20) {
+                        times.shift();
+                        tempData.shift();
+                        vibrationData.shift();
+                        speedData.shift();
+                    }
+                    
+                    // 更新图表
+                    this.realtimeChart.setOption({
+                        xAxis: { data: times },
+                        series: [
+                            { data: tempData },
+                            { data: vibrationData },
+                            { data: speedData }
+                        ]
+                    });
+                    
+                    // 同步数据到数据库
+                    this.syncDataToDatabase();
+                }, 5000);
+            }
+
+            startUpdates() {
+                // 更新运行时间
+                setInterval(() => {
+                    const now = new Date();
+                    const diff = now - this.startTime;
+                    const hours = Math.floor(diff / 3600000);
+                    const minutes = Math.floor((diff % 3600000) / 60000);
+                    const seconds = Math.floor((diff % 60000) / 1000);
+                    
+                    document.getElementById('uptime').textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
+
+                // 定期刷新数据
+                setInterval(() => {
+                    this.loadData();
+                }, 30000);
+            }
+        }
+
+        // 初始化仪表盘应用
+        const dashboardApp = new DashboardApp();
+    </script>
+</body>
+</html>

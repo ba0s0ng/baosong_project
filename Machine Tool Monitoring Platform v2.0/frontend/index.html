@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工业互联网机床监测平台</title>
+    <!-- 引入Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <!-- 引入自定义CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-light">
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fa fa-industry mr-2"></i>
+                工业互联网机床监测平台
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#dashboard">
+                            <i class="fa fa-tachometer mr-1"></i> 仪表盘
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#machines">
+                            <i class="fa fa-cogs mr-1"></i> 设备管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#digital-twin">
+                            <i class="fa fa-cube mr-1"></i> 数字孪生
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#alarms">
+                            <i class="fa fa-exclamation-triangle mr-1"></i> 报警管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analytics">
+                            <i class="fa fa-bar-chart mr-1"></i> 数据分析
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#maintenance">
+                            <i class="fa fa-wrench mr-1"></i> 维护记录
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <main class="container-fluid pt-20 pb-5">
+        <!-- 仪表盘区域 -->
+        <section id="dashboard" class="mb-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">
+                        <i class="fa fa-tachometer mr-2"></i>
+                        系统仪表盘
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <!-- 关键指标卡片 -->
+                    <div class="row mb-4">
+                        <div class="col-md-2 mb-3">
+                            <div class="card border-left-primary shadow-sm">
+                                <div class="card-body">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-machines">--</div>
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">设备总数</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <div class="card border-left-success shadow-sm">
+                                <div class="card-body">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="online-machines">--</div>
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">在线设备</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <div class="card border-left-warning shadow-sm">
+                                <div class="card-body">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="offline-machines">--</div>
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">离线设备</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <div class="card border-left-danger shadow-sm">
+                                <div class="card-body">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-alarms">--</div>
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">活跃报警</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <div class="card border-left-info shadow-sm">
+                                <div class="card-body">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="high-priority-alarms">--</div>
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">高优先级报警</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <div class="card border-left-secondary shadow-sm">
+                                <div class="card-body">
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-alarms">--</div>
+                                    <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">总报警数</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 图表区域 -->
+                    <div class="row">
+                        <!-- 设备状态分布图 -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h3 class="h6 mb-0">设备状态分布</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="machine-status-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 温度趋势图 -->
+                        <div class="col-md-8 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h3 class="h6 mb-0">关键参数趋势</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="parameter-trend-chart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 最近报警列表 -->
+                    <div class="mt-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h3 class="h6 mb-0">最近报警</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>时间</th>
+                                                <th>设备</th>
+                                                <th>类型</th>
+                                                <th>级别</th>
+                                                <th>描述</th>
+                                                <th>状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-alarms-table">
+                                            <!-- 报警数据将通过JavaScript动态填充 -->
+                                            <tr>
+                                                <td colspan="6" class="text-center">加载中...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 设备管理区域 -->
+        <section id="machines" class="mb-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col">
+                            <h2 class="h4 mb-0">
+                                <i class="fa fa-cogs mr-2"></i>
+                                设备管理
+                            </h2>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addMachineModal">
+                                <i class="fa fa-plus mr-1"></i> 添加设备
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>设备名称</th>
+                                    <th>类型</th>
+                                    <th>型号</th>
+                                    <th>位置</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="machines-table">
+                                <!-- 设备数据将通过JavaScript动态填充 -->
+                                <tr>
+                                    <td colspan="6" class="text-center">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 数字孪生区域 -->
+        <section id="digital-twin" class="mb-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">
+                        <i class="fa fa-cube mr-2"></i>
+                        数字孪生
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- 设备选择 -->
+                        <div class="col-md-3 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h3 class="h6 mb-0">选择设备</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group mb-3">
+                                        <label for="twin-machine-select">设备列表</label>
+                                        <select id="twin-machine-select" class="form-control">
+                                            <option value="">加载中...</option>
+                                        </select>
+                                    </div>
+                                    <div id="machine-details" class="mt-4">
+                                        <!-- 设备详情将通过JavaScript动态填充 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 3D模型展示 -->
+                        <div class="col-md-9 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h3 class="h6 mb-0">设备3D模型</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="three-container" style="width: 100%; height: 500px; background-color: #f8f9fa;">
+                                        <!-- Three.js 3D场景将在这里渲染 -->
+                                        <div class="d-flex justify-content-center align-items-center h-100">
+                                            <p class="text-muted">请选择设备查看3D模型</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 报警管理区域 -->
+        <section id="alarms" class="mb-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">
+                        <i class="fa fa-exclamation-triangle mr-2"></i>
+                        报警管理
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <!-- 报警过滤 -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-2">
+                            <select id="alarm-machine-filter" class="form-control">
+                                <option value="">所有设备</option>
+                                <!-- 设备选项将通过JavaScript动态填充 -->
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select id="alarm-status-filter" class="form-control">
+                                <option value="">所有状态</option>
+                                <option value="false">未处理</option>
+                                <option value="true">已处理</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select id="alarm-level-filter" class="form-control">
+                                <option value="">所有级别</option>
+                                <option value="high">高</option>
+                                <option value="medium">中</option>
+                                <option value="low">低</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button id="alarm-filter-btn" class="btn btn-primary w-100">
+                                <i class="fa fa-filter mr-1"></i> 筛选
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 报警列表 -->
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>设备</th>
+                                    <th>类型</th>
+                                    <th>级别</th>
+                                    <th>描述</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alarms-table">
+                                <!-- 报警数据将通过JavaScript动态填充 -->
+                                <tr>
+                                    <td colspan="7" class="text-center">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 数据分析区域 -->
+        <section id="analytics" class="mb-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">
+                        <i class="fa fa-bar-chart mr-2"></i>
+                        数据分析
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <!-- 分析参数选择 -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-2">
+                            <select id="analytics-machine-select" class="form-control">
+                                <option value="">选择设备</option>
+                                <!-- 设备选项将通过JavaScript动态填充 -->
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select id="analytics-parameter-select" class="form-control">
+                                <option value="temperature">温度</option>
+                                <option value="vibration">振动</option>
+                                <option value="current">电流</option>
+                                <option value="rotation_speed">转速</option>
+                                <option value="pressure">压力</option>
+                                <option value="power">功率</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select id="analytics-time-range" class="form-control">
+                                <option value="24">最近24小时</option>
+                                <option value="72">最近72小时</option>
+                                <option value="168">最近7天</option>
+                                <option value="720">最近30天</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button id="analytics-generate-btn" class="btn btn-primary w-100">
+                                <i class="fa fa-refresh mr-1"></i> 生成分析
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 分析图表 -->
+                    <div class="row">
+                        <div class="col-md-8 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h3 class="h6 mb-0">参数趋势分析</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="analytics-trend-chart" style="height: 400px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 统计信息 -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h3 class="h6 mb-0">设备统计信息</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="machine-statistics" class="space-y-3">
+                                        <!-- 统计信息将通过JavaScript动态填充 -->
+                                        <div class="text-center text-muted">请选择设备生成统计信息</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 维护记录区域 -->
+        <section id="maintenance" class="mb-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col">
+                            <h2 class="h4 mb-0">
+                                <i class="fa fa-wrench mr-2"></i>
+                                维护记录
+                            </h2>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addMaintenanceModal">
+                                <i class="fa fa-plus mr-1"></i> 添加维护记录
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- 维护记录列表 -->
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>设备</th>
+                                    <th>维护类型</th>
+                                    <th>开始时间</th>
+                                    <th>结束时间</th>
+                                    <th>执行人</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="maintenance-table">
+                                <!-- 维护记录将通过JavaScript动态填充 -->
+                                <tr>
+                                    <td colspan="7" class="text-center">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">© 2024 工业互联网机床监测平台 - 沈阳理工大学</p>
+                </div>
+                <div class="col-md-6 text-md-right">
+                    <p class="mb-0">版本 V1.0</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 添加设备模态框 -->
+    <div class="modal fade" id="addMachineModal" tabindex="-1" aria-labelledby="addMachineModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addMachineModalLabel">添加设备</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addMachineForm">
+                        <div class="mb-3">
+                            <label for="machine-name" class="form-label">设备名称</label>
+                            <input type="text" class="form-control" id="machine-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="machine-type" class="form-label">设备类型</label>
+                            <input type="text" class="form-control" id="machine-type" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="machine-model" class="form-label">设备型号</label>
+                            <input type="text" class="form-control" id="machine-model">
+                        </div>
+                        <div class="mb-3">
+                            <label for="machine-location" class="form-label">设备位置</label>
+                            <input type="text" class="form-control" id="machine-location">
+                        </div>
+                        <div class="mb-3">
+                            <label for="machine-status" class="form-label">设备状态</label>
+                            <select class="form-control" id="machine-status">
+                                <option value="online">在线</option>
+                                <option value="offline">离线</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveMachineBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加维护记录模态框 -->
+    <div class="modal fade" id="addMaintenanceModal" tabindex="-1" aria-labelledby="addMaintenanceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addMaintenanceModalLabel">添加维护记录</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addMaintenanceForm">
+                        <div class="mb-3">
+                            <label for="maintenance-machine" class="form-label">设备</label>
+                            <select class="form-control" id="maintenance-machine" required>
+                                <option value="">选择设备</option>
+                                <!-- 设备选项将通过JavaScript动态填充 -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maintenance-type" class="form-label">维护类型</label>
+                            <input type="text" class="form-control" id="maintenance-type" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maintenance-description" class="form-label">描述</label>
+                            <textarea class="form-control" id="maintenance-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maintenance-performed-by" class="form-label">执行人</label>
+                            <input type="text" class="form-control" id="maintenance-performed-by">
+                        </div>
+                        <div class="mb-3">
+                            <label for="maintenance-status" class="form-label">状态</label>
+                            <select class="form-control" id="maintenance-status">
+                                <option value="pending">待处理</option>
+                                <option value="in_progress">进行中</option>
+                                <option value="completed">已完成</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveMaintenanceBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 引入自定义JS -->
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/machines.js"></script>
+    <script src="js/digital-twin.js"></script>
+    <script src="js/alarms.js"></script>
+    <script src="js/analytics.js"></script>
+    <script src="js/app.js"></script>
+    <!-- 初始化应用 -->
+    <script>
+        // 当DOM加载完成后初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            // 创建App实例
+            const app = new MachineMonitoringApp();
+            // 初始化应用
+            app.init();
+        });
+    </script>
+</body>
+</html>

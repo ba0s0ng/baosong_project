@@ -1,0 +1,34 @@
+{
+    "app": {
+        "name": "电能质量分析系统",
+        "version": "1.0.0",
+        "company": "电力科技",
+        "language": "zh_CN"
+    },
+    "ui": {
+        "theme": "default",
+        "font_size": 10,
+        "window_width": 1200,
+        "window_height": 800,
+        "auto_save_interval": 300
+    },
+    "data": {
+        "sampling_rate": 1000,
+        "buffer_size": 10000,
+        "history_days": 30,
+        "fake_data_enabled": true
+    },
+    "analysis": {
+        "harmonic_orders": 50,
+        "voltage_threshold": 0.1,
+        "frequency_threshold": 0.05,
+        "flicker_threshold": 1.0
+    },
+    "alarm": {
+        "voltage_upper": 1.1,
+        "voltage_lower": 0.9,
+        "frequency_upper": 50.2,
+        "frequency_lower": 49.8,
+        "harmonic_thd_limit": 0.08
+    }
+}
